@@ -1,0 +1,361 @@
+/* ── sethdev template ──────────────────────────────────
+   Dark navy + teal accent style matching sethdev.com
+   Fonts: Josefin Sans (headings), Poppins (body)
+   ──────────────────────────────────────────────────── */
+
+/* ── Color variables ──────────────────────────────────── */
+
+:root {
+  --bg: #0f172a;
+  --bg-card: #1e293b;
+  --text: #cbd5e1;
+  --text-heading: rgba(248, 250, 252, 0.9);
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  --teal: #5eead4;
+  --teal-muted: rgba(94, 234, 212, 0.8);
+  --teal-dim: rgba(94, 234, 212, 0.4);
+  --teal-border: rgba(94, 234, 212, 0.3);
+  --teal-border-hover: rgba(94, 234, 212, 0.6);
+  --border: rgba(255, 255, 255, 0.1);
+  --code-bg: #1e293b;
+}
+
+/* ── Page setup ───────────────────────────────────────── */
+
+@page {
+  size: var(--page-size, A4);
+  margin: var(--page-margin, 2.5cm 2cm 2cm 2cm);
+
+  @top-left {
+    content: string(doc-title);
+    font-family: "Josefin Sans", sans-serif;
+    font-size: 8pt;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  @bottom-center {
+    content: counter(page) " / " counter(pages);
+    font-family: "Poppins", sans-serif;
+    font-size: 8pt;
+    color: var(--text-muted);
+  }
+}
+
+@page :first {
+  @top-left { content: none; }
+  @bottom-center { content: none; }
+}
+
+/* Capture doc title for running headers */
+.document-header h1,
+.title-page-title {
+  string-set: doc-title content(text);
+}
+
+/* ── Base typography ──────────────────────────────────── */
+
+body {
+  font-family: "Poppins", system-ui, -apple-system, sans-serif;
+  font-size: 11pt;
+  font-weight: 400;
+  line-height: 1.7;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* ── Title page ───────────────────────────────────────── */
+
+.title-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-height: 100vh;
+  break-after: page;
+  position: relative;
+}
+
+.title-page-accent {
+  width: 60px;
+  height: 4px;
+  background: var(--teal);
+  border-radius: 2px;
+  margin-bottom: 2em;
+}
+
+.title-page-title {
+  font-family: "Josefin Sans", sans-serif;
+  font-size: 36pt;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-heading);
+  margin: 0 0 0.3em 0;
+}
+
+.title-page-subtitle {
+  font-family: "Poppins", sans-serif;
+  font-size: 14pt;
+  font-weight: 300;
+  color: var(--text-subtle);
+  margin: 0 0 2em 0;
+}
+
+.title-page-divider {
+  width: 40px;
+  height: 1px;
+  background: var(--teal-border);
+  margin-bottom: 2em;
+}
+
+.title-page-meta {
+  font-size: 11pt;
+  color: var(--text-muted);
+}
+
+.title-page-meta p {
+  margin: 0.2em 0;
+}
+
+/* ── Inline header (non-title-page mode) ──────────────── */
+
+.document-header {
+  margin-bottom: 2em;
+  padding-bottom: 1.5em;
+  border-bottom: 1px solid var(--border);
+}
+
+.document-header h1 {
+  font-family: "Josefin Sans", sans-serif;
+  font-size: 24pt;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.2em 0;
+  color: var(--text-heading);
+}
+
+.subtitle {
+  font-size: 12pt;
+  font-weight: 300;
+  color: var(--text-subtle);
+  margin: 0 0 0.5em 0;
+}
+
+.meta {
+  font-size: 10pt;
+  color: var(--text-muted);
+}
+
+.meta .author::after {
+  content: " \00b7  ";
+  color: var(--teal-dim);
+}
+
+/* ── Content headings ─────────────────────────────────── */
+
+/* // prefix on all content headings */
+.content h1::before,
+.content h2::before,
+.content h3::before,
+.content h4::before {
+  content: "//  ";
+  color: rgba(94, 234, 212, 0.5);
+  font-weight: 400;
+}
+
+.content h1 {
+  font-family: "Josefin Sans", sans-serif;
+  font-size: 32pt;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-heading);
+  margin-top: 1.8em;
+  margin-bottom: 0.6em;
+}
+
+.content h2 {
+  font-family: "Josefin Sans", sans-serif;
+  font-size: 24pt;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-heading);
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  padding-bottom: 0.3em;
+}
+
+.content h3 {
+  font-family: "Josefin Sans", sans-serif;
+  font-size: 18pt;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text-heading);
+  margin-top: 1.2em;
+  margin-bottom: 0.4em;
+}
+
+.content h4 {
+  font-family: "Josefin Sans", sans-serif;
+  font-size: 14pt;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text-subtle);
+  text-transform: uppercase;
+  margin-top: 1em;
+  margin-bottom: 0.3em;
+}
+
+/* ── Content body ─────────────────────────────────────── */
+
+.content p {
+  margin: 0.6em 0;
+}
+
+.content ul,
+.content ol {
+  margin: 0.6em 0;
+  padding-left: 1.2em;
+}
+
+.content ul {
+  list-style: none;
+}
+
+.content ul li {
+  position: relative;
+  padding-left: 1em;
+  margin: 0.4em 0;
+}
+
+.content ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.65em;
+  width: 5px;
+  height: 5px;
+  background: var(--teal-dim);
+  border-radius: 50%;
+}
+
+.content ol li {
+  margin: 0.4em 0;
+}
+
+.content a {
+  color: var(--teal-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(94, 234, 212, 0.3);
+}
+
+/* ── Blockquotes ──────────────────────────────────────── */
+
+.content blockquote {
+  border-left: 3px solid var(--teal-border);
+  padding-left: 1em;
+  margin-left: 0;
+  color: var(--text-subtle);
+  font-style: italic;
+}
+
+/* ── Code ─────────────────────────────────────────────── */
+
+.content code {
+  font-family: "SF Mono", "Fira Code", "JetBrains Mono", monospace;
+  font-size: 0.88em;
+  background: var(--code-bg);
+  color: var(--teal-muted);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.content pre {
+  background: var(--code-bg);
+  padding: 1.2em;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.content pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text);
+}
+
+/* ── Tables ───────────────────────────────────────────── */
+
+.content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 10pt;
+}
+
+.content th {
+  font-family: "Josefin Sans", sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-align: left;
+  padding: 0.6em 0.8em;
+  border-bottom: 2px solid var(--teal-border);
+  color: var(--text-heading);
+}
+
+.content td {
+  padding: 0.5em 0.8em;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Horizontal rules ─────────────────────────────────── */
+
+.content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+/* ── Strong & emphasis ────────────────────────────────── */
+
+.content strong {
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.content em {
+  color: var(--text-subtle);
+}
+
+/* ── Print controls ───────────────────────────────────── */
+
+h1, h2, h3, h4 {
+  break-after: avoid;
+}
+
+.content {
+  orphans: 3;
+  widows: 3;
+}
+
+/* ── Light theme override ─────────────────────────────── */
+
+[data-theme="light"] {
+  --bg: #ffffff;
+  --bg-card: #f8fafc;
+  --text: #334155;
+  --text-heading: #0f172a;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+  --teal: #0d9488;
+  --teal-muted: rgba(13, 148, 136, 0.85);
+  --teal-dim: rgba(13, 148, 136, 0.4);
+  --teal-border: rgba(13, 148, 136, 0.3);
+  --border: #e2e8f0;
+  --code-bg: #f1f5f9;
+}

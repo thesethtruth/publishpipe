@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme | default('dark') }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title | default("Document") }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --page-size: {{ pageSize | default("A4") }};
+      --page-margin: {{ pageMargin | default("2.5cm 2cm 2cm 2cm") }};
+    }
+    {{ css }}
+  </style>
+</head>
+<body>
+  {% if titlePage %}
+  <section class="title-page">
+    <div class="title-page-accent"></div>
+    {% if title %}<h1 class="title-page-title">{{ title }}</h1>{% endif %}
+    {% if subtitle %}<p class="title-page-subtitle">{{ subtitle }}</p>{% endif %}
+    <div class="title-page-divider"></div>
+    <div class="title-page-meta">
+      {% if author %}<p class="title-page-author">{{ author }}</p>{% endif %}
+      {% if date %}<p class="title-page-date">{{ date }}</p>{% endif %}
+    </div>
+  </section>
+  {% else %}
+  <header class="document-header">
+    {% if title %}<h1>{{ title }}</h1>{% endif %}
+    {% if subtitle %}<p class="subtitle">{{ subtitle }}</p>{% endif %}
+    <div class="meta">
+      {% if author %}<span class="author">{{ author }}</span>{% endif %}
+      {% if date %}<span class="date">{{ date }}</span>{% endif %}
+    </div>
+  </header>
+  {% endif %}
+
+  <main class="content">
+    {{ content }}
+  </main>
+
+</body>
+</html>
