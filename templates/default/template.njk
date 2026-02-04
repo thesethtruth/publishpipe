@@ -1,14 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="{{ theme | default('light') }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ title | default("Document") }}</title>
   <style>
+    :root {
+      --page-size: {{ pageSize | default("A4") }};
+      --page-margin: {{ pageMargin | default("2.5cm 2cm 2cm 2cm") }};
+    }
     {{ css }}
   </style>
 </head>
 <body>
+  {% if titlePage %}
+  <section class="title-page">
+    {% if title %}<h1 class="title-page-title">{{ title }}</h1>{% endif %}
+    {% if subtitle %}<p class="title-page-subtitle">{{ subtitle }}</p>{% endif %}
+    <div class="title-page-meta">
+      {% if author %}<p class="title-page-author">{{ author }}</p>{% endif %}
+      {% if date %}<p class="title-page-date">{{ date }}</p>{% endif %}
+    </div>
+  </section>
+  {% else %}
   <header class="document-header">
     {% if title %}<h1>{{ title }}</h1>{% endif %}
     {% if subtitle %}<p class="subtitle">{{ subtitle }}</p>{% endif %}
@@ -17,6 +31,7 @@
       {% if date %}<span class="date">{{ date }}</span>{% endif %}
     </div>
   </header>
+  {% endif %}
 
   <main class="content">
     {{ content }}

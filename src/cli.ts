@@ -3,31 +3,68 @@ import { parseArgs } from "util";
 import { resolve, basename } from "path";
 import { render } from "./render";
 import { startDevServer } from "./server";
+import { loadConfig, type PublishPipeConfig } from "./config";
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),
   options: {
-    template: { type: "string", default: "default" },
+    template: { type: "string" },
     output: { type: "string", short: "o" },
     port: { type: "string", default: "3000" },
+    "title-page": { type: "boolean" },
+    theme: { type: "string" },
   },
   allowPositionals: true,
 });
 
 const [command, markdownFile] = positionals;
 
-if (!command || !markdownFile) {
+// Load config file
+const config = await loadConfig(process.cwd());
+
+// CLI args override config values
+const templateName = values.template ?? config.template ?? "default";
+const titlePage = values["title-page"] ?? config.titlePage;
+const theme = (values.theme as PublishPipeConfig["theme"]) ?? config.theme;
+
+// Merge into resolved config
+const resolvedConfig: PublishPipeConfig = {
+  ...config,
+  template: templateName,
+  ...(titlePage !== undefined && { titlePage }),
+  ...(theme && { theme }),
+};
+
+// Determine markdown source
+const markdownPath = markdownFile
+  ? resolve(markdownFile)
+  : config.content
+    ? resolve(config.content)
+    : undefined;
+
+// Need either a file, content, or chapters
+if (!command) {
   console.log(`Usage:
-  publishpipe dev <file.md> [--template name] [--port 3000]
-  publishpipe build <file.md> [--template name] [--output out.pdf]`);
+  publishpipe dev [file.md] [--template name] [--port 3000] [--title-page] [--theme light|dark]
+  publishpipe build [file.md] [--template name] [--output out.pdf] [--title-page] [--theme light|dark]`);
   process.exit(1);
 }
 
-const markdownPath = resolve(markdownFile);
-const templateDir = resolve(import.meta.dir, "../templates");
-const templateName = values.template!;
+if (!markdownPath && !resolvedConfig.chapters?.length) {
+  console.error(
+    "No content source. Provide a markdown file argument, or set content/chapters in publishpipe.config.ts"
+  );
+  process.exit(1);
+}
 
-const renderOpts = { markdownPath, templateDir, templateName };
+const templateDir = resolve(import.meta.dir, "../templates");
+
+const renderOpts = {
+  markdownPath,
+  templateDir,
+  templateName,
+  config: resolvedConfig,
+};
 
 if (command === "dev") {
   const port = parseInt(values.port!, 10);
@@ -42,7 +79,9 @@ if (command === "dev") {
 
   // Determine output path
   const outputPath =
-    values.output || basename(markdownFile, ".md") + ".pdf";
+    values.output ??
+    resolvedConfig.output ??
+    (markdownPath ? basename(markdownPath, ".md") + ".pdf" : "output.pdf");
 
   console.log(`Building PDF: ${outputPath}`);
 
