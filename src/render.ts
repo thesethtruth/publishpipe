@@ -11,6 +11,8 @@ export interface RenderOptions {
   templateDir: string;
   /** Full config (chapters, titlePage, theme, page, etc.) */
   config?: PublishPipeConfig;
+  /** Base directory for resolving relative chapter paths */
+  cwd?: string;
 }
 
 export interface RenderResult {
@@ -56,7 +58,7 @@ export async function render(opts: RenderOptions): Promise<RenderResult> {
 
   if (config.chapters?.length) {
     // Multi-chapter mode
-    const result = await readChapters(config.chapters, process.cwd());
+    const result = await readChapters(config.chapters, opts.cwd ?? process.cwd());
     frontmatter = result.frontmatter;
     mdBody = result.body;
   } else if (opts.markdownPath) {

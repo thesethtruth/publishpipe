@@ -14,6 +14,7 @@ const HOT_RELOAD_SCRIPT = `
 
 export function startDevServer(opts: RenderOptions & { port: number }) {
   const clients = new Set<{ send(msg: string): void }>();
+  const cwd = opts.cwd ?? process.cwd();
 
   async function renderPage(): Promise<string> {
     const { html } = await render(opts);
@@ -79,11 +80,11 @@ export function startDevServer(opts: RenderOptions & { port: number }) {
     );
   }
 
-  // Watch chapter files
+  // Watch chapter files (resolve relative to cwd)
   const chapters = opts.config?.chapters;
   if (chapters?.length) {
     for (const chapter of chapters) {
-      const chapterPath = resolve(chapter);
+      const chapterPath = resolve(cwd, chapter);
       watchers.push(
         watch(chapterPath, () => {
           console.log("Chapter change:", chapterPath);
@@ -93,17 +94,32 @@ export function startDevServer(opts: RenderOptions & { port: number }) {
     }
   }
 
-  // Watch config file
-  const configPath = resolve(process.cwd(), "publishpipe.config.ts");
+  // Watch project config
+  const projectConfigPath = resolve(cwd, "publishpipe.config.ts");
   try {
     watchers.push(
-      watch(configPath, () => {
+      watch(projectConfigPath, () => {
         console.log("Config change detected, rebuilding...");
         rebuild();
       })
     );
   } catch {
     // Config file may not exist, that's fine
+  }
+
+  // Watch root config (if different from project config)
+  const rootConfigPath = resolve(opts.templateDir, "..", "publishpipe.config.ts");
+  if (resolve(rootConfigPath) !== resolve(projectConfigPath)) {
+    try {
+      watchers.push(
+        watch(rootConfigPath, () => {
+          console.log("Root config change detected, rebuilding...");
+          rebuild();
+        })
+      );
+    } catch {
+      // Root config may not exist
+    }
   }
 
   // Watch template directory

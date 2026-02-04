@@ -3,7 +3,7 @@ import { parseArgs } from "util";
 import { resolve, basename } from "path";
 import { render } from "./render";
 import { startDevServer } from "./server";
-import { loadConfig, type PublishPipeConfig } from "./config";
+import { loadProjectConfig, type PublishPipeConfig } from "./config";
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),
@@ -17,10 +17,31 @@ const { values, positionals } = parseArgs({
   allowPositionals: true,
 });
 
-const [command, markdownFile] = positionals;
+const [command, target] = positionals;
+const rootDir = resolve(import.meta.dir, "..");
 
-// Load config file
-const config = await loadConfig(process.cwd());
+// Detect project vs single .md file
+let projectDir: string | null = null;
+let markdownPath: string | undefined;
+
+if (target) {
+  if (target.endsWith(".md")) {
+    // Single-file backward compat
+    markdownPath = resolve(target);
+  } else {
+    // Project mode
+    projectDir = resolve(rootDir, "projects", target);
+    const configFile = Bun.file(resolve(projectDir, "publishpipe.config.ts"));
+    if (!(await configFile.exists())) {
+      console.error(`Project not found: ${projectDir}`);
+      console.error(`Expected a publishpipe.config.ts in projects/${target}/`);
+      process.exit(1);
+    }
+  }
+}
+
+// Load config: root defaults merged with project config
+const config = await loadProjectConfig(rootDir, projectDir);
 
 // CLI args override config values
 const templateName = values.template ?? config.template ?? "default";
@@ -35,24 +56,25 @@ const resolvedConfig: PublishPipeConfig = {
   ...(theme && { theme }),
 };
 
-// Determine markdown source
-const markdownPath = markdownFile
-  ? resolve(markdownFile)
-  : config.content
-    ? resolve(config.content)
-    : undefined;
+// Base directory for resolving relative paths
+const resolveBase = projectDir ?? process.cwd();
+
+// Resolve markdown path from config.content if not already set
+if (!markdownPath && config.content) {
+  markdownPath = resolve(resolveBase, config.content);
+}
 
 // Need either a file, content, or chapters
 if (!command) {
   console.log(`Usage:
-  publishpipe dev [file.md] [--template name] [--port 3000] [--title-page] [--theme light|dark]
-  publishpipe build [file.md] [--template name] [--output out.pdf] [--title-page] [--theme light|dark]`);
+  publishpipe dev [project-name|file.md] [--template name] [--port 3000] [--title-page] [--theme light|dark]
+  publishpipe build [project-name|file.md] [--template name] [--output out.pdf] [--title-page] [--theme light|dark]`);
   process.exit(1);
 }
 
 if (!markdownPath && !resolvedConfig.chapters?.length) {
   console.error(
-    "No content source. Provide a markdown file argument, or set content/chapters in publishpipe.config.ts"
+    "No content source. Provide a markdown file argument, a project name, or set content/chapters in publishpipe.config.ts"
   );
   process.exit(1);
 }
@@ -64,6 +86,7 @@ const renderOpts = {
   templateDir,
   templateName,
   config: resolvedConfig,
+  cwd: resolveBase,
 };
 
 if (command === "dev") {
@@ -78,15 +101,18 @@ if (command === "dev") {
   await Bun.write(tmpHtml, html);
 
   // Determine output path
-  const outputPath =
-    values.output ??
+  const outputFilename =
     resolvedConfig.output ??
     (markdownPath ? basename(markdownPath, ".md") + ".pdf" : "output.pdf");
+
+  const outputPath = values.output
+    ? resolve(values.output) // CLI flag: resolve from cwd
+    : resolve(resolveBase, outputFilename); // config: resolve from project dir
 
   console.log(`Building PDF: ${outputPath}`);
 
   const proc = Bun.spawn(
-    ["bunx", "pagedjs-cli", tmpHtml, "-o", resolve(outputPath)],
+    ["bunx", "pagedjs-cli", tmpHtml, "-o", outputPath],
     {
       stdout: "inherit",
       stderr: "inherit",

@@ -46,3 +46,20 @@ export async function loadConfig(cwd: string): Promise<PublishPipeConfig> {
     return {};
   }
 }
+
+/** Load root config as defaults, then shallow-merge project config on top (with nested merge for `page`) */
+export async function loadProjectConfig(
+  rootDir: string,
+  projectDir: string | null
+): Promise<PublishPipeConfig> {
+  const rootConfig = await loadConfig(rootDir);
+  if (!projectDir || resolve(projectDir) === resolve(rootDir)) {
+    return rootConfig;
+  }
+  const projectConfig = await loadConfig(projectDir);
+  return {
+    ...rootConfig,
+    ...projectConfig,
+    page: { ...rootConfig.page, ...projectConfig.page },
+  };
+}
