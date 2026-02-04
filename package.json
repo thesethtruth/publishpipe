@@ -1,12 +1,25 @@
 {
   "name": "z-publishpipe",
-  "module": "index.ts",
+  "module": "src/cli.ts",
   "type": "module",
   "private": true,
+  "bin": {
+    "publishpipe": "src/cli.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/cli.ts dev",
+    "build": "bun run src/cli.ts build"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/nunjucks": "^3.2.6"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "marked": "^17.0.1",
+    "nunjucks": "^3.2.4"
   }
 }
