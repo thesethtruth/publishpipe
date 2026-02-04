@@ -3,8 +3,9 @@ A productive and highly customizable way of getting PDF documents out of the doo
 
 ## Goal
 - Write content in markdown
-- Make templates in HTML/CSS/Jinja2
-- Bake content to nice PDFs using Playwright
+- Make templates in HTML/CSS/Nunjucks
+- Convert markdown to html using Pandoc?
+- Bake content to nice PDFs using pagedjs-cli
 
 ## Stack
 - Tailwind CSS
