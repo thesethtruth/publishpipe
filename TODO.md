@@ -1,0 +1,5 @@
+- Separate style, template and theme
+- Also git track projects but separately
+- Connect to boekhouden API
+- Add generic components (algemene voorwaarden for instance)
+- Add config init/project new
