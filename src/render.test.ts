@@ -105,4 +105,68 @@ describe("render", () => {
     expect(result.html).not.toContain('<section class="title-page">');
     expect(result.html).toContain("document-header");
   });
+
+  test("config frontmatter provides default template variables", async () => {
+    const result = await render({
+      markdownPath: resolve(projectDir, "content/01-intro.md"),
+      templateDir,
+      templateName: "sethdev",
+      config: {
+        proposal: true,
+        frontmatter: {
+          bedrijf: "Test BV",
+          plaats: "Amsterdam",
+        },
+      },
+    });
+
+    expect(result.html).toContain("Test BV");
+    expect(result.html).toContain("Amsterdam");
+    expect(result.html).toContain("proposal-cover");
+  });
+
+  test("file frontmatter overrides config frontmatter", async () => {
+    // 01-intro.md has title: "Project Proposal" in frontmatter
+    const result = await render({
+      markdownPath: resolve(projectDir, "content/01-intro.md"),
+      templateDir,
+      templateName: "sethdev",
+      config: {
+        proposal: true,
+        frontmatter: {
+          title: "Should Be Overridden",
+          bedrijf: "Config BV",
+        },
+      },
+    });
+
+    // file frontmatter title wins over config frontmatter title
+    expect(result.html).toContain("Project Proposal");
+    expect(result.html).not.toContain("Should Be Overridden");
+    // config frontmatter still provides values not in file
+    expect(result.html).toContain("Config BV");
+  });
+
+  test("proposal cover renders with sethdev template", async () => {
+    const result = await render({
+      markdownPath: resolve(projectDir, "content/01-intro.md"),
+      templateDir,
+      templateName: "sethdev",
+      config: {
+        proposal: true,
+        frontmatter: {
+          bedrijf: "Afzender BV",
+          klant: "Ontvanger BV",
+          offertedatum: "5 februari 2026",
+        },
+      },
+    });
+
+    expect(result.html).toContain("proposal-cover");
+    expect(result.html).toContain("Afzender BV");
+    expect(result.html).toContain("Ontvanger BV");
+    expect(result.html).toContain("5 februari 2026");
+    // should not render regular title page
+    expect(result.html).not.toContain('<section class="title-page">');
+  });
 });

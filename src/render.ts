@@ -92,9 +92,11 @@ export async function render(opts: RenderOptions): Promise<RenderResult> {
     content: contentHtml,
     css: templateCss,
     titlePage: config.titlePage ?? false,
+    proposal: config.proposal ?? false,
     theme: config.theme ?? "light",
     pageSize: config.page?.size ?? "A4",
     pageMargin: config.page?.margin ?? "2.5cm 2cm 2cm 2cm",
+    ...config.frontmatter,
     ...frontmatter,
   });
 

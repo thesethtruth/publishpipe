@@ -119,6 +119,117 @@ body {
   margin: 0.2em 0;
 }
 
+/* ── Proposal cover page ─────────────────────────────── */
+
+.proposal-cover {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  break-after: page;
+}
+
+.proposal-cover-header {
+  margin-bottom: 3em;
+}
+
+.proposal-cover-label {
+  font-family: "Josefin Sans", sans-serif;
+  font-size: 11pt;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin: 0 0 0.8em 0;
+}
+
+.proposal-cover .title-page-title {
+  margin-bottom: 0.2em;
+}
+
+.proposal-cover .title-page-subtitle {
+  margin-bottom: 0;
+}
+
+.proposal-cover-body {
+  margin-top: auto;
+  padding-bottom: 2em;
+}
+
+.proposal-cover-columns {
+  display: flex;
+  gap: 3em;
+}
+
+.proposal-cover-columns .proposal-cover-section {
+  flex: 1;
+}
+
+.proposal-cover-section {
+  margin-bottom: 2em;
+}
+
+.proposal-cover-section-title {
+  font-family: "Josefin Sans", sans-serif;
+  font-size: 9pt;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--teal-muted);
+  margin: 0 0 0.8em 0;
+  padding-bottom: 0.4em;
+  border-bottom: 1px solid var(--teal-border);
+}
+
+.proposal-cover-section p {
+  font-size: 10pt;
+  margin: 0.2em 0;
+  color: var(--text);
+}
+
+.proposal-cover-company {
+  font-weight: 500;
+  color: var(--text-heading) !important;
+}
+
+.proposal-cover-legal {
+  margin-top: 0.8em;
+}
+
+.proposal-cover-legal p {
+  font-size: 9pt;
+  color: var(--text-muted) !important;
+}
+
+.proposal-cover-field {
+  display: inline-block;
+  min-width: 7em;
+  font-family: "Josefin Sans", sans-serif;
+  font-size: 9pt;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.proposal-cover-table {
+  width: auto;
+  border-collapse: collapse;
+}
+
+.proposal-cover-table td {
+  font-size: 10pt;
+  padding: 0.2em 0;
+  border: none;
+}
+
+.proposal-cover-table .proposal-cover-field {
+  padding-right: 2em;
+}
+
+/* Capture doc title from proposal cover */
+.proposal-cover .title-page-title {
+  string-set: doc-title content(text);
+}
+
 /* ── Inline header (non-title-page mode) ──────────────── */
 
 .document-header {

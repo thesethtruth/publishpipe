@@ -16,7 +16,9 @@
   </style>
 </head>
 <body>
-  {% if titlePage %}
+  {% if proposal %}
+  {% include "proposal-cover.njk" %}
+  {% elif titlePage %}
   <section class="title-page">
     <div class="title-page-accent"></div>
     {% if title %}<h1 class="title-page-title">{{ title }}</h1>{% endif %}

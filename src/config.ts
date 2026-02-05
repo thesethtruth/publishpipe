@@ -18,6 +18,10 @@ export interface PublishPipeConfig {
   content?: string;
   /** Ordered list of markdown files (multi-chapter) */
   chapters?: string[];
+  /** Show a Dutch proposal cover page (sethdev template) */
+  proposal?: boolean;
+  /** Default frontmatter values (overridden by markdown frontmatter) */
+  frontmatter?: Record<string, unknown>;
   /** Output PDF filename */
   output?: string;
 }
@@ -61,5 +65,6 @@ export async function loadProjectConfig(
     ...rootConfig,
     ...projectConfig,
     page: { ...rootConfig.page, ...projectConfig.page },
+    frontmatter: { ...rootConfig.frontmatter, ...projectConfig.frontmatter },
   };
 }

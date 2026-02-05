@@ -12,6 +12,7 @@ const { values, positionals } = parseArgs({
     output: { type: "string", short: "o" },
     port: { type: "string", default: "3000" },
     "title-page": { type: "boolean" },
+    proposal: { type: "boolean" },
     theme: { type: "string" },
   },
   allowPositionals: true,
@@ -46,6 +47,7 @@ const config = await loadProjectConfig(rootDir, projectDir);
 // CLI args override config values
 const templateName = values.template ?? config.template ?? "default";
 const titlePage = values["title-page"] ?? config.titlePage;
+const proposal = values.proposal ?? config.proposal;
 const theme = (values.theme as PublishPipeConfig["theme"]) ?? config.theme;
 
 // Merge into resolved config
@@ -53,6 +55,7 @@ const resolvedConfig: PublishPipeConfig = {
   ...config,
   template: templateName,
   ...(titlePage !== undefined && { titlePage }),
+  ...(proposal !== undefined && { proposal }),
   ...(theme && { theme }),
 };
 
@@ -67,8 +70,8 @@ if (!markdownPath && config.content) {
 // Need either a file, content, or chapters
 if (!command) {
   console.log(`Usage:
-  publishpipe dev [project-name|file.md] [--template name] [--port 3000] [--title-page] [--theme light|dark]
-  publishpipe build [project-name|file.md] [--template name] [--output out.pdf] [--title-page] [--theme light|dark]`);
+  publishpipe dev [project-name|file.md] [--template name] [--port 3000] [--title-page] [--proposal] [--theme light|dark]
+  publishpipe build [project-name|file.md] [--template name] [--output out.pdf] [--title-page] [--proposal] [--theme light|dark]`);
   process.exit(1);
 }
 
