@@ -1,55 +1,119 @@
 <section class="proposal-cover">
-  <div class="proposal-cover-header">
-    <div class="title-page-accent"></div>
-    <p class="proposal-cover-label">Offerte</p>
-    {% if title %}<h1 class="title-page-title">{{ title }}</h1>{% endif %}
-    {% if subtitle %}<p class="title-page-subtitle">{{ subtitle }}</p>{% endif %}
-  </div>
-
-  <div class="proposal-cover-body">
-    <div class="proposal-cover-columns">
-      {% if bedrijf or adres or telefoon or email %}
-      <div class="proposal-cover-section">
-        <h4 class="proposal-cover-section-title">Afzender</h4>
-        {% if bedrijf %}<p class="proposal-cover-company">{{ bedrijf }}</p>{% endif %}
-        {% if adres %}<p>{{ adres }}</p>{% endif %}
-        {% if postcode or plaats %}<p>{{ postcode }}{% if postcode and plaats %} {% endif %}{{ plaats }}</p>{% endif %}
-        {% if telefoon %}<p>{{ telefoon }}</p>{% endif %}
-        {% if email %}<p>{{ email }}</p>{% endif %}
-        {% if website %}<p>{{ website }}</p>{% endif %}
-
-        {% if kvknummer or btwnummer or iban %}
-        <div class="proposal-cover-legal">
-          {% if kvknummer %}<p><span class="proposal-cover-field">KVK</span> {{ kvknummer }}</p>{% endif %}
-          {% if btwnummer %}<p><span class="proposal-cover-field">BTW</span> {{ btwnummer }}</p>{% endif %}
-          {% if iban %}<p><span class="proposal-cover-field">IBAN</span> {{ iban }}</p>{% endif %}
-        </div>
+    <div class="proposal-cover-header">
+        <div class="title-page-accent"></div>
+        <p class="proposal-cover-label">Offerte</p>
+        {% if title %}
+            <h1 class="p-page-title">{{ title }}</h1>
         {% endif %}
-      </div>
-      {% endif %}
-
-      {% if klant or klantadres or klantemail %}
-      <div class="proposal-cover-section">
-        <h4 class="proposal-cover-section-title">Aan</h4>
-        {% if klant %}<p class="proposal-cover-company">{{ klant }}</p>{% endif %}
-        {% if klantcontact %}<p>t.a.v. {{ klantcontact }}</p>{% endif %}
-        {% if klantadres %}<p>{{ klantadres }}</p>{% endif %}
-        {% if klantpostcode or klantplaats %}<p>{{ klantpostcode }}{% if klantpostcode and klantplaats %} {% endif %}{{ klantplaats }}</p>{% endif %}
-        {% if klanttelefoon %}<p>{{ klanttelefoon }}</p>{% endif %}
-        {% if klantemail %}<p>{{ klantemail }}</p>{% endif %}
-      </div>
-      {% endif %}
+        {% if subtitle %}
+            <p class="title-page-subtitle">{{ subtitle }}</p>
+        {% endif %}
     </div>
-
-    <div class="proposal-cover-section">
-      <h4 class="proposal-cover-section-title">Offertegegevens</h4>
-      <table class="proposal-cover-table">
-        {% if offertedatum %}<tr><td class="proposal-cover-field">Datum</td><td>{{ offertedatum }}</td></tr>{% endif %}
-        {% if vervaldatum %}<tr><td class="proposal-cover-field">Geldig tot</td><td>{{ vervaldatum }}</td></tr>{% endif %}
-        {% if offertenummer %}<tr><td class="proposal-cover-field">Nummer</td><td>{{ offertenummer }}</td></tr>{% endif %}
-        {% if offertecode %}<tr><td class="proposal-cover-field">Code</td><td>{{ offertecode }}</td></tr>{% endif %}
-        {% if kenmerk %}<tr><td class="proposal-cover-field">Kenmerk</td><td>{{ kenmerk }}</td></tr>{% endif %}
-      </table>
+    <div class="proposal-cover-footer">
+        <div class="proposal-cover-section">
+            <table class="proposal-cover-table">
+                {% if offertedatum %}
+                    <tr>
+                        <td class="proposal-cover-field">Datum</td>
+                        <td>{{ offertedatum }}</td>
+                    </tr>
+                {% endif %}
+                {% if vervaldatum %}
+                    <tr>
+                        <td class="proposal-cover-field">Geldig tot</td>
+                        <td>{{ vervaldatum }}</td>
+                    </tr>
+                {% endif %}
+                {% if offertenummer %}
+                    <tr>
+                        <td class="proposal-cover-field">Nummer</td>
+                        <td>{{ offertenummer }}</td>
+                    </tr>
+                {% endif %}
+                {% if offertecode %}
+                    <tr>
+                        <td class="proposal-cover-field">Code</td>
+                        <td>{{ offertecode }}</td>
+                    </tr>
+                {% endif %}
+                {% if kenmerk %}
+                    <tr>
+                        <td class="proposal-cover-field">Kenmerk</td>
+                        <td>{{ kenmerk }}</td>
+                    </tr>
+                {% endif %}
+            </table>
+        </div>
     </div>
-  </div>
+    <div class="proposal-cover-columns">
+        {% if klant or klantadres or klantemail %}
+            <div class="proposal-cover-section">
+                <h4 class="proposal-cover-section-title">Aan</h4>
+                {% if klant %}
+                    <p class="proposal-cover-company">{{ klant }}</p>
+                {% endif %}
+                {% if klantcontact %}
+                    <p>t.a.v. {{ klantcontact }}</p>
+                {% endif %}
+                {% if klantadres %}
+                    <p>{{ klantadres }}</p>
+                {% endif %}
+                {% if klantpostcode or klantplaats %}
+                    <p>{{ klantpostcode }}
+                        {% if klantpostcode and klantplaats %}{% endif %}
+                        {{ klantplaats }}</p>
+                {% endif %}
+                {% if klanttelefoon %}
+                    <p>{{ klanttelefoon }}</p>
+                {% endif %}
+                {% if klantemail %}
+                    <p>{{ klantemail }}</p>
+                {% endif %}
+            </div>
+        {% endif %}
+        {% if bedrijf or adres or telefoon or email %}
+            <div class="proposal-cover-section">
+                <h4 class="proposal-cover-section-title">Afzender</h4>
+                {% if bedrijf %}
+                    <p class="proposal-cover-company">{{ bedrijf }}</p>
+                {% endif %}
+                {% if adres %}
+                    <p>{{ adres }}</p>
+                {% endif %}
+                {% if postcode or plaats %}
+                    <p>{{ postcode }}
+                        {% if postcode and plaats %}{% endif %}
+                        {{ plaats }}</p>
+                {% endif %}
+                {% if telefoon %}
+                    <p>{{ telefoon }}</p>
+                {% endif %}
+                {% if email %}
+                    <p>{{ email }}</p>
+                {% endif %}
+                {% if website %}
+                    <p>{{ website }}</p>
+                {% endif %}
+                {% if kvknummer or btwnummer or iban %}
+                    <div class="proposal-cover-legal">
+                        {% if kvknummer %}
+                            <p>
+                                <span class="proposal-cover-field">KVK</span>
+                                {{ kvknummer }}</p>
+                        {% endif %}
+                        {% if btwnummer %}
+                            <p>
+                                <span class="proposal-cover-field">BTW</span>
+                                {{ btwnummer }}</p>
+                        {% endif %}
+                        {% if iban %}
+                            <p>
+                                <span class="proposal-cover-field">IBAN</span>
+                                {{ iban }}</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
 </section>
