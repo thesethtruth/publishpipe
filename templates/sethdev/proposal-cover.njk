@@ -89,10 +89,14 @@
                     <p>{{ telefoon }}</p>
                 {% endif %}
                 {% if email %}
-                    <p>{{ email }}</p>
+                    <p>
+                        <a href="mailto:{{ email }}">{{ email }}</a>
+                    </p>
                 {% endif %}
                 {% if website %}
-                    <p>{{ website }}</p>
+                    <p>
+                        <a href="https://{{ website }}">{{ website }}</a>
+                    </p>
                 {% endif %}
                 {% if kvknummer or btwnummer or iban %}
                     <div class="proposal-cover-legal">
