@@ -16,6 +16,7 @@ describe("render", () => {
     });
 
     expect(result.html).toContain("Introduction");
+    expect(result.html).toContain("doc-shell");
     expect(result.frontmatter.title).toBe("Project Proposal");
     expect(result.frontmatter.author).toBe("Your Name");
   });
@@ -188,5 +189,31 @@ describe("render", () => {
     const titlePageIdx = result.html.indexOf(".title-page {");
     const condensedIdx = result.html.lastIndexOf("font-size: 9pt");
     expect(condensedIdx).toBeGreaterThan(titlePageIdx);
+  });
+
+  test("pdf profile injects a TOC page instead of interactive shell", async () => {
+    const result = await render({
+      markdownPath: resolve(projectDir, "content/01-intro.md"),
+      templateDir,
+      templateName: "default",
+      profile: "pdf",
+      config: {},
+    });
+
+    expect(result.html).toContain('class="toc-page"');
+    expect(result.html).not.toContain('<div class="doc-shell">');
+  });
+
+  test("toc can be disabled", async () => {
+    const result = await render({
+      markdownPath: resolve(projectDir, "content/01-intro.md"),
+      templateDir,
+      templateName: "default",
+      profile: "interactive",
+      config: { toc: false },
+    });
+
+    expect(result.html).not.toContain('<aside class="doc-toc">');
+    expect(result.html).toContain("doc-body");
   });
 });

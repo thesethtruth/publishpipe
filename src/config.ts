@@ -26,6 +26,8 @@ export interface PublishPipeConfig {
   source?: string[];
   /** Show a Dutch proposal cover page (sethdev template) */
   proposal?: boolean;
+  /** Show generated table of contents wrappers for interactive/pdf renderers */
+  toc?: boolean;
   /** Default frontmatter values (overridden by markdown frontmatter) */
   frontmatter?: Record<string, unknown>;
   /** Output PDF filename. Use {{fn}} for source filename without extension. */

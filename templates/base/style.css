@@ -12,3 +12,66 @@
   height: 0;
   margin: 0;
 }
+
+/* Interactive shell */
+.doc-shell {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 2rem;
+}
+
+.doc-toc {
+  position: sticky;
+  top: 1rem;
+  align-self: start;
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+}
+
+.doc-toc-title {
+  margin: 0 0 0.6rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.doc-toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doc-toc-item {
+  margin: 0.2rem 0;
+}
+
+.doc-toc-item.level-2 {
+  padding-left: 0.8rem;
+  opacity: 0.85;
+}
+
+.doc-toc a {
+  text-decoration: none;
+}
+
+.doc-body {
+  min-width: 0;
+}
+
+/* PDF content wrappers */
+.toc-page {
+  break-after: page;
+}
+
+.toc-page h1 {
+  margin-bottom: 1rem;
+}
+
+@media print {
+  .doc-shell {
+    display: block;
+  }
+
+  .doc-toc {
+    display: none;
+  }
+}

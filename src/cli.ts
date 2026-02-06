@@ -6,6 +6,7 @@ import { resolveSourceDocuments } from "./content/load";
 import { renderHtml, type HtmlRenderOptions } from "./renderers/html";
 import { buildPdfFromHtml } from "./renderers/pdf";
 import { buildWebFromHtml } from "./renderers/web";
+import type { RenderProfile } from "./renderers/profile";
 import { startDevServer } from "./server";
 
 const { values, positionals } = parseArgs({
@@ -84,7 +85,7 @@ function applyCliOverrides(config: PublishPipeConfig): PublishPipeConfig {
   };
 }
 
-async function resolveRenderOptions(): Promise<HtmlRenderOptions> {
+async function resolveRenderOptions(profile: RenderProfile): Promise<HtmlRenderOptions> {
   const config = applyCliOverrides(await loadProjectConfig(rootDir, projectDir));
   const markdownPath = targetMarkdownPath ?? (config.content ? resolve(resolveBase, config.content) : undefined);
 
@@ -101,6 +102,7 @@ async function resolveRenderOptions(): Promise<HtmlRenderOptions> {
     templateName: config.template ?? "default",
     config,
     cwd: resolveBase,
+    profile,
   };
 }
 
@@ -132,17 +134,17 @@ function resolveOutputCollisions(
 
 if (command === "dev") {
   const port = parseInt(values.port!, 10);
-  const initialRenderOptions = await resolveRenderOptions();
+  const initialRenderOptions = await resolveRenderOptions("interactive");
   startDevServer({
     port,
     initialRenderOptions,
-    resolveRenderOptions,
+    resolveRenderOptions: () => resolveRenderOptions("interactive"),
     rootDir,
   });
 } else if (command === "build" || command === "web") {
-  const renderOptions = await resolveRenderOptions();
-  const resolvedConfig = renderOptions.config ?? {};
   const isPdfBuild = command === "build";
+  const renderOptions = await resolveRenderOptions(isPdfBuild ? "pdf" : "interactive");
+  const resolvedConfig = renderOptions.config ?? {};
   const outputSuffix = isPdfBuild ? ".pdf" : ".html";
   const defaultOutputTemplate =
     !values.output && !isPdfBuild && resolvedConfig.output?.endsWith(".pdf")

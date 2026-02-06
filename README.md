@@ -11,8 +11,8 @@ Most document tooling forces a bad tradeoff: either write fast in Markdown and l
 - Write in Markdown for speed and focus.
 - Apply brand-consistent presentation in HTML/CSS templates.
 - Render the same content into:
-  - Interactive HTML for web/static publishing.
-  - Paginated PDF for proposals, reports, and print workflows.
+  - `interactive` HTML for web/static publishing.
+  - `pdf` for proposals, reports, and print workflows.
 
 This keeps docs consistent with your web brand while preserving maximum author productivity.
 
@@ -31,11 +31,22 @@ The codebase is organized as three layers:
 - Maps config/frontmatter into template variables.
 
 3. Renderers (`src/renderers/`)
-- `html`: renders branded HTML.
-- `pdf`: renders PDF via `pagedjs-cli`.
-- `web`: writes static HTML output.
+- `html`: renders branded HTML with a profile (`interactive` or `pdf`).
+- `pdf`: turns HTML into PDF via `pagedjs-cli`.
+- `web`: writes interactive-profile HTML output.
 
 Pipeline: **Markdown** -> **Content model** -> **Presentation model** -> **HTML renderer** -> (**PDF renderer** or **Web renderer**).
+
+### Profile behavior
+
+- `interactive` profile:
+  - Heading IDs + floating TOC sidebar.
+  - Output optimized for web/static hosting.
+- `pdf` profile:
+  - Heading IDs + generated contents page.
+  - Output optimized for paged media.
+
+No generic MDX-style component runtime is required; the pipeline stays markdown-first with structural wrappers.
 
 ## Install
 
@@ -147,6 +158,7 @@ export default defineConfig({
   chapters: ["ch1.md", "ch2.md"],
   source: ["content/*.md"],
   output: "{{fn}}.pdf", // use {{fn}} for multi-source
+  toc: true,
 });
 ```
 
@@ -179,6 +191,7 @@ Flags:
 - `--title-page` enable title page
 - `--proposal` enable proposal cover (template-specific)
 - `--theme <light|dark>` validated theme value
+- `toc: false` in config disables generated TOC wrappers/pages
 
 ## Templates
 
