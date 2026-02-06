@@ -1,42 +1,73 @@
 # publishpipe
 
-Markdown in, PDF out. No Electron, no LaTeX, no suffering.
+Markdown in. Branded HTML out. Print-ready PDF out. One content source, two render targets.
 
-Write your docs in markdown with YAML frontmatter. Preview with hot reload. Export to print-ready PDF with proper pagination, running headers, and page numbers. That's it.
+## Philosophy
 
-## Why
+Most document tooling forces a bad tradeoff: either write fast in Markdown and lose design control, or design precisely and lose writing velocity.
 
-Because every time you open Google Docs to write a proposal, a part of you dies. You already have a text editor you like. Use it.
+`publishpipe` is built to remove that tradeoff:
 
-The pipeline: **markdown** -> **gray-matter** (frontmatter) -> **marked** (HTML) -> **nunjucks** (template) -> **paged.js** (PDF). Each piece does one thing well.
+- Write in Markdown for speed and focus.
+- Apply brand-consistent presentation in HTML/CSS templates.
+- Render the same content into:
+  - Interactive HTML for web/static publishing.
+  - Paginated PDF for proposals, reports, and print workflows.
+
+This keeps docs consistent with your web brand while preserving maximum author productivity.
+
+## Architecture
+
+The codebase is organized as three layers:
+
+1. Content model (`src/content/`)
+- Parses frontmatter + markdown.
+- Resolves chapters and source globs.
+- Produces normalized document inputs.
+
+2. Presentation model (`src/presentation/`)
+- Loads Nunjucks templates.
+- Resolves CSS inheritance (`@extends`) with cycle detection.
+- Maps config/frontmatter into template variables.
+
+3. Renderers (`src/renderers/`)
+- `html`: renders branded HTML.
+- `pdf`: renders PDF via `pagedjs-cli`.
+- `web`: writes static HTML output.
+
+Pipeline: **Markdown** -> **Content model** -> **Presentation model** -> **HTML renderer** -> (**PDF renderer** or **Web renderer**).
 
 ## Install
 
-```
+```bash
 bun install
 ```
 
 ## Quick start
 
-Single file:
+Single file preview:
 
-```
+```bash
 bun run dev content/example.md
 ```
 
-Open `localhost:3000`. Edit the markdown. It reloads.
+Build PDF:
 
-When you're done staring at it:
-
-```
+```bash
 bun run build content/example.md -o proposal.pdf
+```
+
+Build static HTML:
+
+```bash
+bun run web content/example.md -o proposal.html
 ```
 
 ## Projects
 
-For anything longer than a one-pager, use projects. A project is a folder in `projects/` with its own config and content:
+For larger docs, use project folders in `projects/`:
 
-```
+```text
 projects/example-proposal/
   publishpipe.config.ts
   content/
@@ -45,10 +76,9 @@ projects/example-proposal/
     03-conclusion.md
 ```
 
-The project config only needs what's specific to that project:
+Example project config:
 
 ```ts
-// projects/example-proposal/publishpipe.config.ts
 import { defineConfig } from "../../src/config";
 
 export default defineConfig({
@@ -61,30 +91,19 @@ export default defineConfig({
 });
 ```
 
-Root `publishpipe.config.ts` provides defaults (template, theme, page size). Project config merges on top.
+Run:
 
+```bash
+bun run dev example-proposal
+bun run build example-proposal
+bun run web example-proposal
 ```
-bun run dev example-proposal        # dev server
-bun run build example-proposal      # -> projects/example-proposal/proposal.pdf
-```
 
-Detection is simple: ends in `.md` = single file, otherwise = project name.
-
-## Page breaks
-
-Use `---` (horizontal rule) in your markdown to insert a page break:
-
-```md
-Content on page one.
-
----
-
-Content on page two.
-```
+Target detection: if `target` ends with `.md`, it's treated as a file path; otherwise it's treated as a project name under `projects/`.
 
 ## Frontmatter
 
-First file's YAML frontmatter becomes document metadata:
+The first file's frontmatter is used as document metadata:
 
 ```yaml
 ---
@@ -95,87 +114,85 @@ date: February 2026
 ---
 ```
 
-These populate the title page and running headers.
+These fields feed title pages, running headers, and other template variables.
+
+## Page breaks
+
+Use `---` in markdown to insert a page break:
+
+```md
+Content on page one.
+
+---
+
+Content on page two.
+```
 
 ## Config
 
-All fields are optional. Root config sets defaults, project config overrides, CLI flags override everything.
+Root `publishpipe.config.ts` provides defaults. Project config overrides root values. CLI flags override both.
 
 ```ts
-// publishpipe.config.ts
 import { defineConfig } from "./src/config";
 
 export default defineConfig({
-  template: "default",       // template folder in templates/
-  titlePage: true,           // dedicated title page from frontmatter
-  theme: "light",            // "light" | "dark"
+  template: "default",
+  titlePage: true,
+  theme: "light", // light | dark
   page: {
-    size: "A4",              // paper size
-    margin: "2.5cm 2cm",     // CSS margin
+    size: "A4",
+    margin: "2.5cm 2cm",
   },
-  content: "doc.md",         // single file path
-  chapters: ["ch1.md", ...], // ordered chapter files -> single PDF
-  source: ["content/*.md"],  // glob patterns -> one PDF per file
-  output: "{{fn}}.pdf",      // output filename ({{fn}} = source filename)
+  content: "doc.md",
+  chapters: ["ch1.md", "ch2.md"],
+  source: ["content/*.md"],
+  output: "{{fn}}.pdf", // use {{fn}} for multi-source
 });
 ```
 
 ## Multi-file output
 
-Use `source` instead of `chapters` when you want each markdown file to become its own PDF:
+Use `source` to render each matched markdown file independently:
 
 ```ts
 export default defineConfig({
   source: ["content/*.md"],
-  output: "{{fn}}.pdf",
+  output: "report-{{fn}}.pdf",
 });
 ```
 
-- `source` takes an array of glob patterns
-- Each matched file becomes a separate PDF
-- Use `{{fn}}` in `output` for the source filename (without extension)
-
-Example: `content/notes-weekly-1.md` with output `report-{{fn}}.pdf` creates `report-notes-weekly-1.pdf`.
+`publishpipe` deduplicates overlapping globs and fails fast if multiple files resolve to the same output filename.
 
 ## CLI
 
-```
-publishpipe dev [target] [options]     # hot-reload preview
-publishpipe build [target] [options]   # generate PDF
+```text
+publishpipe dev [target] [options]      # hot-reload preview server
+publishpipe build [target] [options]    # generate PDF
+publishpipe web [target] [options]      # generate static HTML
 ```
 
-`target` is a project name or a `.md` file path.
+Flags:
 
-| Flag | What it does |
-|------|-------------|
-| `--template <name>` | Template folder (default: `default`) |
-| `--output, -o <path>` | Output PDF path |
-| `--port <number>` | Dev server port (default: `3000`) |
-| `--title-page` | Enable title page |
-| `--theme <light\|dark>` | Theme |
+- `--template <name>` template folder (default: `default`)
+- `--output, -o <path>` output path (supports `{{fn}}` in multi-source mode)
+- `--port <number>` dev server port (default: `3000`)
+- `--title-page` enable title page
+- `--proposal` enable proposal cover (template-specific)
+- `--theme <light|dark>` validated theme value
 
 ## Templates
 
-Templates live in `templates/<name>/` and contain:
+Templates live in `templates/<name>/`:
 
-- `template.njk` -- Nunjucks HTML template
-- `style.css` -- CSS with `@page` rules for print layout
+- `template.njk` HTML template
+- `style.css` CSS including `@page` rules for print
 
-Available variables in the template: `content`, `css`, `title`, `subtitle`, `author`, `date`, `titlePage`, `theme`, `pageSize`, `pageMargin`, plus any extra frontmatter fields.
+Template vars include: `content`, `css`, `title`, `subtitle`, `author`, `date`, `titlePage`, `proposal`, `theme`, `pageSize`, `pageMargin`, plus custom frontmatter fields.
 
 ### CSS inheritance
 
-A template can extend another template's CSS by adding `/* @extends <parent> */` at the top of its `style.css`:
-
-```css
-/* @extends sethdev */
-/* Only overrides below — base styles inherited from sethdev */
-
-body { font-size: 9pt; }
-```
-
-The parent CSS loads first, then child overrides cascade on top. All built-in templates extend `base`, which provides shared behavior like `---` for page breaks.
+Use `/* @extends <parent-template> */` at the top of `style.css` to inherit parent CSS. Parent styles load first, then child overrides. Cycles are detected and rejected.
 
 ## Stack
 
-Bun for everything. `gray-matter` for frontmatter, `marked` for markdown, `nunjucks` for templates, `pagedjs-cli` for PDF. No bundler config, no framework, no build step.
+Bun runtime + tests, `gray-matter` for frontmatter, `marked` for markdown, `nunjucks` for templating, and `pagedjs-cli` for PDF pagination.

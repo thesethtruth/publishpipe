@@ -1,6 +1,6 @@
 import { watch, type FSWatcher } from "fs";
 import { resolve } from "path";
-import { render, type RenderOptions } from "./render";
+import { renderHtml, type HtmlRenderOptions } from "./renderers/html";
 
 const HOT_RELOAD_SCRIPT = `
 <script>
@@ -12,17 +12,92 @@ const HOT_RELOAD_SCRIPT = `
 </script>
 `;
 
-export function startDevServer(opts: RenderOptions & { port: number }) {
+export interface DevServerOptions {
+  port: number;
+  initialRenderOptions: HtmlRenderOptions;
+  resolveRenderOptions?: () => Promise<HtmlRenderOptions>;
+  rootDir: string;
+}
+
+export function startDevServer(opts: DevServerOptions) {
   const clients = new Set<{ send(msg: string): void }>();
-  const cwd = opts.cwd ?? process.cwd();
+  let currentRenderOptions = opts.initialRenderOptions;
+  let cachedHtml = "";
+
+  const contentWatchers: FSWatcher[] = [];
+  const configWatchers: FSWatcher[] = [];
+  const templateWatchers: FSWatcher[] = [];
 
   async function renderPage(): Promise<string> {
-    const { html } = await render(opts);
-    // Inject hot reload script before </body>
+    const { html } = await renderHtml(currentRenderOptions);
     return html.replace("</body>", HOT_RELOAD_SCRIPT + "</body>");
   }
 
-  let cachedHtml = "";
+  function closeWatchers(watchers: FSWatcher[]) {
+    while (watchers.length > 0) {
+      watchers.pop()?.close();
+    }
+  }
+
+  function addContentWatcher(path: string, label: string) {
+    contentWatchers.push(
+      watch(path, () => {
+        console.log(`${label}:`, path);
+        void rebuild(false);
+      })
+    );
+  }
+
+  function syncContentWatchers() {
+    closeWatchers(contentWatchers);
+
+    if (currentRenderOptions.markdownPath) {
+      addContentWatcher(resolve(currentRenderOptions.markdownPath), "Change detected");
+    }
+
+    const cwd = currentRenderOptions.cwd ?? process.cwd();
+    const chapters = currentRenderOptions.config?.chapters;
+    if (chapters?.length) {
+      for (const chapter of chapters) {
+        addContentWatcher(resolve(cwd, chapter), "Chapter change");
+      }
+    }
+  }
+
+  function syncTemplateWatchers() {
+    closeWatchers(templateWatchers);
+    const templatePath = resolve(currentRenderOptions.templateDir, currentRenderOptions.templateName);
+    templateWatchers.push(
+      watch(templatePath, { recursive: true }, (_event, filename) => {
+        console.log("Template change:", filename);
+        void rebuild(false);
+      })
+    );
+  }
+
+  async function refreshRenderOptions() {
+    if (!opts.resolveRenderOptions) {
+      return;
+    }
+
+    currentRenderOptions = await opts.resolveRenderOptions();
+    syncContentWatchers();
+    syncTemplateWatchers();
+  }
+
+  async function rebuild(refreshOptions: boolean) {
+    try {
+      if (refreshOptions) {
+        await refreshRenderOptions();
+      }
+      cachedHtml = await renderPage();
+      for (const client of clients) {
+        client.send("reload");
+      }
+    } catch (err) {
+      console.error("Rebuild error:", err);
+    }
+  }
 
   const server = Bun.serve({
     port: opts.port,
@@ -37,10 +112,10 @@ export function startDevServer(opts: RenderOptions & { port: number }) {
         return undefined;
       }
 
-      // Serve rendered HTML
       if (!cachedHtml) {
         cachedHtml = await renderPage();
       }
+
       return new Response(cachedHtml, {
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
@@ -56,80 +131,43 @@ export function startDevServer(opts: RenderOptions & { port: number }) {
     },
   });
 
-  async function rebuild() {
-    try {
-      cachedHtml = await renderPage();
-      for (const client of clients) {
-        client.send("reload");
-      }
-    } catch (err) {
-      console.error("Rebuild error:", err);
-    }
-  }
+  syncContentWatchers();
+  syncTemplateWatchers();
 
-  const watchers: FSWatcher[] = [];
-
-  // Watch single markdown file if provided
-  if (opts.markdownPath) {
-    const mdPath = resolve(opts.markdownPath);
-    watchers.push(
-      watch(mdPath, () => {
-        console.log("Change detected:", mdPath);
-        rebuild();
-      })
-    );
-  }
-
-  // Watch chapter files (resolve relative to cwd)
-  const chapters = opts.config?.chapters;
-  if (chapters?.length) {
-    for (const chapter of chapters) {
-      const chapterPath = resolve(cwd, chapter);
-      watchers.push(
-        watch(chapterPath, () => {
-          console.log("Chapter change:", chapterPath);
-          rebuild();
-        })
-      );
-    }
-  }
-
-  // Watch project config
-  const projectConfigPath = resolve(cwd, "publishpipe.config.ts");
+  const projectConfigPath = resolve(currentRenderOptions.cwd ?? process.cwd(), "publishpipe.config.ts");
   try {
-    watchers.push(
+    configWatchers.push(
       watch(projectConfigPath, () => {
         console.log("Config change detected, rebuilding...");
-        rebuild();
+        void rebuild(true);
       })
     );
   } catch {
-    // Config file may not exist, that's fine
+    // Optional project config.
   }
 
-  // Watch root config (if different from project config)
-  const rootConfigPath = resolve(opts.templateDir, "..", "publishpipe.config.ts");
+  const rootConfigPath = resolve(opts.rootDir, "publishpipe.config.ts");
   if (resolve(rootConfigPath) !== resolve(projectConfigPath)) {
     try {
-      watchers.push(
+      configWatchers.push(
         watch(rootConfigPath, () => {
           console.log("Root config change detected, rebuilding...");
-          rebuild();
+          void rebuild(true);
         })
       );
     } catch {
-      // Root config may not exist
+      // Optional root config.
     }
   }
 
-  // Watch template directory
-  const templatePath = resolve(opts.templateDir, opts.templateName);
-  watchers.push(
-    watch(templatePath, { recursive: true }, (_event, filename) => {
-      console.log("Template change:", filename);
-      rebuild();
-    })
-  );
+  // Keep API parity with previous implementation by cleaning up watchers on stop.
+  const originalStop = server.stop.bind(server);
+  server.stop = ((closeActiveConnections?: boolean) => {
+    closeWatchers(contentWatchers);
+    closeWatchers(configWatchers);
+    closeWatchers(templateWatchers);
+    return originalStop(closeActiveConnections);
+  }) as typeof server.stop;
 
   console.log(`Dev server running at http://localhost:${opts.port}`);
   return server;

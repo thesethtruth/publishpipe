@@ -1,10 +1,12 @@
 #!/usr/bin/env bun
 import { parseArgs } from "util";
-import { resolve, basename } from "path";
-import { Glob } from "bun";
-import { render } from "./render";
+import { basename, resolve } from "path";
+import { isTheme, loadProjectConfig, type PublishPipeConfig, type Theme } from "./config";
+import { resolveSourceDocuments } from "./content/load";
+import { renderHtml, type HtmlRenderOptions } from "./renderers/html";
+import { buildPdfFromHtml } from "./renderers/pdf";
+import { buildWebFromHtml } from "./renderers/web";
 import { startDevServer } from "./server";
-import { loadProjectConfig, type PublishPipeConfig } from "./config";
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),
@@ -22,16 +24,13 @@ const { values, positionals } = parseArgs({
 const [command, target] = positionals;
 const rootDir = resolve(import.meta.dir, "..");
 
-// Detect project vs single .md file
 let projectDir: string | null = null;
-let markdownPath: string | undefined;
+let targetMarkdownPath: string | undefined;
 
 if (target) {
   if (target.endsWith(".md")) {
-    // Single-file backward compat
-    markdownPath = resolve(target);
+    targetMarkdownPath = resolve(target);
   } else {
-    // Project mode
     projectDir = resolve(rootDir, "projects", target);
     const configFile = Bun.file(resolve(projectDir, "publishpipe.config.ts"));
     if (!(await configFile.exists())) {
@@ -42,144 +41,177 @@ if (target) {
   }
 }
 
-// Load config: root defaults merged with project config
-const config = await loadProjectConfig(rootDir, projectDir);
-
-// CLI args override config values
-const templateName = values.template ?? config.template ?? "default";
-const titlePage = values["title-page"] ?? config.titlePage;
-const proposal = values.proposal ?? config.proposal;
-const theme = (values.theme as PublishPipeConfig["theme"]) ?? config.theme;
-
-// Merge into resolved config
-const resolvedConfig: PublishPipeConfig = {
-  ...config,
-  template: templateName,
-  ...(titlePage !== undefined && { titlePage }),
-  ...(proposal !== undefined && { proposal }),
-  ...(theme && { theme }),
-};
-
-// Base directory for resolving relative paths
-const resolveBase = projectDir ?? process.cwd();
-
-// Resolve markdown path from config.content if not already set
-if (!markdownPath && config.content) {
-  markdownPath = resolve(resolveBase, config.content);
-}
-
-// Need either a file, content, or chapters
 if (!command) {
   console.log(`Usage:
   publishpipe dev [project-name|file.md] [--template name] [--port 3000] [--title-page] [--proposal] [--theme light|dark]
-  publishpipe build [project-name|file.md] [--template name] [--output out.pdf] [--title-page] [--proposal] [--theme light|dark]`);
+  publishpipe build [project-name|file.md] [--template name] [--output out.pdf] [--title-page] [--proposal] [--theme light|dark]
+  publishpipe web [project-name|file.md] [--template name] [--output out.html] [--title-page] [--proposal] [--theme light|dark]`);
   process.exit(1);
 }
 
-if (!markdownPath && !resolvedConfig.chapters?.length && !resolvedConfig.source?.length) {
-  console.error(
-    "No content source. Provide a markdown file argument, a project name, or set content/chapters/source in publishpipe.config.ts"
-  );
-  process.exit(1);
-}
-
+const resolveBase = projectDir ?? process.cwd();
 const templateDir = resolve(import.meta.dir, "../templates");
 
-const renderOpts = {
-  markdownPath,
-  templateDir,
-  templateName,
-  config: resolvedConfig,
-  cwd: resolveBase,
-};
+function parseTheme(themeRaw: unknown): Theme | undefined {
+  if (themeRaw === undefined) {
+    return undefined;
+  }
+  if (typeof themeRaw !== "string" || !isTheme(themeRaw)) {
+    console.error(`Invalid theme '${String(themeRaw)}'. Expected one of: light, dark`);
+    process.exit(1);
+  }
+  return themeRaw;
+}
+
+const cliTheme = parseTheme(values.theme);
+
+function applyCliOverrides(config: PublishPipeConfig): PublishPipeConfig {
+  const titlePage = values["title-page"] ?? config.titlePage;
+  const proposal = values.proposal ?? config.proposal;
+  const theme = cliTheme ?? config.theme;
+
+  if (theme !== undefined && !isTheme(theme)) {
+    console.error(`Invalid theme '${String(theme)}' in config. Expected one of: light, dark`);
+    process.exit(1);
+  }
+
+  return {
+    ...config,
+    template: values.template ?? config.template ?? "default",
+    ...(titlePage !== undefined && { titlePage }),
+    ...(proposal !== undefined && { proposal }),
+    ...(theme !== undefined && { theme }),
+  };
+}
+
+async function resolveRenderOptions(): Promise<HtmlRenderOptions> {
+  const config = applyCliOverrides(await loadProjectConfig(rootDir, projectDir));
+  const markdownPath = targetMarkdownPath ?? (config.content ? resolve(resolveBase, config.content) : undefined);
+
+  if (!markdownPath && !config.chapters?.length && !config.source?.length) {
+    console.error(
+      "No content source. Provide a markdown file argument, a project name, or set content/chapters/source in publishpipe.config.ts"
+    );
+    process.exit(1);
+  }
+
+  return {
+    markdownPath,
+    templateDir,
+    templateName: config.template ?? "default",
+    config,
+    cwd: resolveBase,
+  };
+}
+
+function resolveOutputCollisions(
+  outputTemplate: string,
+  sourceDocs: { path: string; filenameStem: string }[],
+  resolveBaseDir: string
+) {
+  const outputMap = new Map<string, string[]>();
+
+  for (const doc of sourceDocs) {
+    const outputFilename = outputTemplate.replace(/\{\{fn\}\}/g, doc.filenameStem);
+    const outputPath = resolve(resolveBaseDir, outputFilename);
+    const collisions = outputMap.get(outputPath) ?? [];
+    collisions.push(doc.path);
+    outputMap.set(outputPath, collisions);
+  }
+
+  for (const [outputPath, sourceFiles] of outputMap) {
+    if (sourceFiles.length > 1) {
+      console.error(`Multiple source files resolve to the same output: ${outputPath}`);
+      for (const file of sourceFiles) {
+        console.error(`  - ${file}`);
+      }
+      process.exit(1);
+    }
+  }
+}
 
 if (command === "dev") {
   const port = parseInt(values.port!, 10);
-  startDevServer({ ...renderOpts, port });
-} else if (command === "build") {
-  const tmpDir = await import("os").then((os) => os.tmpdir());
+  const initialRenderOptions = await resolveRenderOptions();
+  startDevServer({
+    port,
+    initialRenderOptions,
+    resolveRenderOptions,
+    rootDir,
+  });
+} else if (command === "build" || command === "web") {
+  const renderOptions = await resolveRenderOptions();
+  const resolvedConfig = renderOptions.config ?? {};
+  const isPdfBuild = command === "build";
+  const outputSuffix = isPdfBuild ? ".pdf" : ".html";
+  const defaultOutputTemplate =
+    !values.output && !isPdfBuild && resolvedConfig.output?.endsWith(".pdf")
+      ? resolvedConfig.output.replace(/\.pdf$/i, ".html")
+      : resolvedConfig.output;
 
-  // Multi-file mode: source glob patterns
   if (resolvedConfig.source?.length) {
-    const sourceFiles: string[] = [];
-
-    for (const pattern of resolvedConfig.source) {
-      const glob = new Glob(pattern);
-      for await (const file of glob.scan({ cwd: resolveBase, absolute: true })) {
-        sourceFiles.push(file);
-      }
-    }
-
-    if (sourceFiles.length === 0) {
+    const sourceDocs = await resolveSourceDocuments(resolvedConfig.source, resolveBase);
+    if (sourceDocs.length === 0) {
       console.error("No files matched source patterns:", resolvedConfig.source);
       process.exit(1);
     }
 
-    console.log(`Found ${sourceFiles.length} source file(s)`);
+    console.log(`Found ${sourceDocs.length} source file(s)`);
 
-    for (const sourceFile of sourceFiles) {
-      const fn = basename(sourceFile, ".md");
-      const outputTemplate = resolvedConfig.output ?? "{{fn}}.pdf";
-      const outputFilename = outputTemplate.replace(/\{\{fn\}\}/g, fn);
-      const outputPath = values.output
-        ? resolve(values.output.replace(/\{\{fn\}\}/g, fn))
-        : resolve(resolveBase, outputFilename);
+    const outputTemplate = values.output ?? defaultOutputTemplate ?? `{{fn}}${outputSuffix}`;
+    resolveOutputCollisions(outputTemplate, sourceDocs, resolveBase);
 
-      const { html } = await render({
-        ...renderOpts,
-        markdownPath: sourceFile,
-        config: { ...resolvedConfig, chapters: undefined },
+    for (const doc of sourceDocs) {
+      const outputFilename = outputTemplate.replace(/\{\{fn\}\}/g, doc.filenameStem);
+      const outputPath = resolve(resolveBase, outputFilename);
+      const { html } = await renderHtml({
+        ...renderOptions,
+        markdownPath: doc.path,
+        config: {
+          ...resolvedConfig,
+          chapters: undefined,
+          content: undefined,
+        },
       });
 
-      const tmpHtml = resolve(tmpDir, `publishpipe-${Date.now()}-${fn}.html`);
-      await Bun.write(tmpHtml, html);
-
-      console.log(`Building PDF: ${outputPath}`);
-
-      const proc = Bun.spawn(
-        ["bunx", "pagedjs-cli", tmpHtml, "-o", outputPath],
-        { stdout: "inherit", stderr: "inherit" }
-      );
-      const exitCode = await proc.exited;
-      await Bun.file(tmpHtml).delete();
-
-      if (exitCode !== 0) {
-        console.error(`pagedjs-cli failed for ${fn}`);
-        process.exit(exitCode);
+      if (isPdfBuild) {
+        console.log(`Building PDF: ${outputPath}`);
+        try {
+          await buildPdfFromHtml(html, outputPath, resolveBase);
+        } catch (err) {
+          console.error(`pagedjs-cli failed for ${doc.filenameStem}`);
+          console.error(err);
+          process.exit(1);
+        }
+        console.log(`PDF saved: ${outputPath}`);
+      } else {
+        await buildWebFromHtml(html, outputPath);
+        console.log(`HTML saved: ${outputPath}`);
       }
-
-      console.log(`PDF saved: ${outputPath}`);
     }
   } else {
-    // Single-file mode: chapters or content
-    const { html } = await render(renderOpts);
-
-    const tmpHtml = resolve(tmpDir, `publishpipe-${Date.now()}.html`);
-    await Bun.write(tmpHtml, html);
-
+    const { html } = await renderHtml(renderOptions);
+    const markdownPath = renderOptions.markdownPath;
     const outputFilename =
-      resolvedConfig.output ??
-      (markdownPath ? basename(markdownPath, ".md") + ".pdf" : "output.pdf");
+      values.output ??
+      defaultOutputTemplate ??
+      (markdownPath ? `${basename(markdownPath, ".md")}${outputSuffix}` : `output${outputSuffix}`);
 
-    const outputPath = values.output
-      ? resolve(values.output)
-      : resolve(resolveBase, outputFilename);
-
-    console.log(`Building PDF: ${outputPath}`);
-
-    const proc = Bun.spawn(
-      ["bunx", "pagedjs-cli", tmpHtml, "-o", outputPath],
-      { stdout: "inherit", stderr: "inherit" }
-    );
-    const exitCode = await proc.exited;
-    await Bun.file(tmpHtml).delete();
-
-    if (exitCode !== 0) {
-      console.error("pagedjs-cli failed");
-      process.exit(exitCode);
+    const outputPath = resolve(resolveBase, outputFilename);
+    if (isPdfBuild) {
+      console.log(`Building PDF: ${outputPath}`);
+      try {
+        await buildPdfFromHtml(html, outputPath, resolveBase);
+      } catch (err) {
+        console.error("pagedjs-cli failed");
+        console.error(err);
+        process.exit(1);
+      }
+      console.log(`PDF saved: ${outputPath}`);
+    } else {
+      await buildWebFromHtml(html, outputPath);
+      console.log(`HTML saved: ${outputPath}`);
     }
-
-    console.log(`PDF saved: ${outputPath}`);
   }
 } else {
   console.error(`Unknown command: ${command}`);

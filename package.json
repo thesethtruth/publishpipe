@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "bun run src/cli.ts dev",
-    "build": "bun run src/cli.ts build"
+    "build": "bun run src/cli.ts build",
+    "web": "bun run src/cli.ts web"
   },
   "devDependencies": {
     "@types/bun": "latest",

@@ -1,6 +1,6 @@
 import { test, expect, describe } from "bun:test";
 import { resolve } from "path";
-import { loadConfig, loadProjectConfig, defineConfig } from "./config";
+import { loadConfig, loadProjectConfig, defineConfig, isTheme } from "./config";
 
 const rootDir = resolve(import.meta.dir, "..");
 const projectDir = resolve(rootDir, "projects/example-proposal");
@@ -9,6 +9,14 @@ describe("defineConfig", () => {
   test("passes config through unchanged", () => {
     const config = { template: "fancy", theme: "dark" as const };
     expect(defineConfig(config)).toEqual(config);
+  });
+});
+
+describe("theme validation", () => {
+  test("accepts known themes and rejects unknown values", () => {
+    expect(isTheme("light")).toBe(true);
+    expect(isTheme("dark")).toBe(true);
+    expect(isTheme("neon")).toBe(false);
   });
 });
 

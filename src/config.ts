@@ -1,4 +1,8 @@
 import { resolve } from "path";
+import { pathToFileURL } from "url";
+
+export const THEME_VALUES = ["light", "dark"] as const;
+export type Theme = (typeof THEME_VALUES)[number];
 
 export interface PublishPipeConfig {
   /** Template folder name from templates/ */
@@ -6,7 +10,7 @@ export interface PublishPipeConfig {
   /** Show a dedicated title page (uses frontmatter title/subtitle/author/date) */
   titlePage?: boolean;
   /** Theme: "light" or "dark" */
-  theme?: "light" | "dark";
+  theme?: Theme;
   /** Page layout */
   page?: {
     /** Paper size: "A4", "letter", etc. */
@@ -45,12 +49,19 @@ export async function loadConfig(cwd: string): Promise<PublishPipeConfig> {
   }
 
   try {
-    const mod = await import(configPath);
+    // Cache-bust dynamic import so config edits apply during long-running dev sessions.
+    const cacheBust = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const configUrl = `${pathToFileURL(configPath).href}?v=${cacheBust}`;
+    const mod = await import(configUrl);
     return mod.default ?? {};
   } catch (err) {
     console.error(`Failed to load ${CONFIG_FILENAME}:`, err);
     return {};
   }
+}
+
+export function isTheme(value: string): value is Theme {
+  return THEME_VALUES.includes(value as Theme);
 }
 
 /** Load root config as defaults, then shallow-merge project config on top (with nested merge for `page`) */
