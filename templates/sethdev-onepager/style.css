@@ -1,0 +1,139 @@
+/* @extends sethdev */
+/* ── sethdev-onepager overrides ───────────────────────────
+   Condensed variant: tighter margins, smaller fonts, compact spacing.
+   Inherits all base styles from sethdev template.
+   ──────────────────────────────────────────────────── */
+
+/* ── Page setup (tighter margins) ────────────────────────── */
+
+@page {
+  margin: var(--page-margin, 1cm 1cm 1cm 1cm);
+
+  @top-left {
+    font-size: 7pt;
+  }
+
+  @bottom-center {
+    font-size: 7pt;
+  }
+}
+
+/* ── Base typography (smaller) ───────────────────────────── */
+
+body {
+  font-size: 9pt;
+  line-height: 1.55;
+}
+
+/* ── Document header (condensed) ─────────────────────────── */
+
+.document-header {
+  margin-bottom: 1em;
+  padding-bottom: 0.8em;
+  border-bottom: 2px solid var(--teal-border);
+}
+
+.document-header h1 {
+  font-size: 18pt;
+  margin: 0 0 0.15em 0;
+}
+
+.subtitle {
+  font-size: 10pt;
+  margin: 0 0 0.3em 0;
+}
+
+.meta {
+  font-size: 8pt;
+}
+
+/* ── Content headings (reduced sizes) ────────────────────── */
+
+.content h1::before,
+.content h2::before,
+.content h3::before {
+  font-weight: 600;
+}
+
+.content h1 {
+  font-size: 18pt;
+  margin-top: 1em;
+  margin-bottom: 0.3em;
+}
+
+.content h2 {
+  font-size: 14pt;
+  margin-top: 0.8em;
+  margin-bottom: 0.25em;
+  padding-bottom: 0.2em;
+}
+
+.content h3 {
+  font-size: 12pt;
+  margin-top: 0.6em;
+  margin-bottom: 0.2em;
+}
+
+.content h4 {
+  font-size: 10pt;
+  margin-top: 0.5em;
+  margin-bottom: 0.15em;
+}
+
+/* ── Content body (tighter spacing) ──────────────────────── */
+
+.content p {
+  margin: 0.35em 0;
+}
+
+.content ul,
+.content ol {
+  margin: 0.35em 0;
+}
+
+.content ul li {
+  margin: 0.2em 0;
+}
+
+.content ul li::before {
+  top: 0.6em;
+  width: 4px;
+  height: 4px;
+}
+
+.content ol li {
+  margin: 0.2em 0;
+}
+
+/* ── Code (reduced padding) ──────────────────────────────── */
+
+.content code {
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+}
+
+.content pre {
+  padding: 0.8em;
+  line-height: 1.4;
+}
+
+/* ── Tables (tighter) ────────────────────────────────────── */
+
+.content table {
+  margin: 0.6em 0;
+  font-size: 9pt;
+}
+
+.content th {
+  padding: 0.4em 0.6em;
+}
+
+.content td {
+  padding: 0.3em 0.6em;
+}
+
+/* ── Horizontal rules (reduced margin) ───────────────────── */
+
+.content hr {
+  margin: 1em 0;
+}

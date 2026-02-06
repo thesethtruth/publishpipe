@@ -169,4 +169,24 @@ describe("render", () => {
     // should not render regular title page
     expect(result.html).not.toContain('<section class="title-page">');
   });
+
+  test("CSS @extends loads parent template CSS", async () => {
+    // sethdev-onepager extends sethdev
+    const result = await render({
+      markdownPath: resolve(projectDir, "content/01-intro.md"),
+      templateDir,
+      templateName: "sethdev-onepager",
+      config: {},
+    });
+
+    // Should have parent sethdev styles (title-page, proposal-cover classes)
+    expect(result.html).toContain(".title-page {");
+    expect(result.html).toContain(".proposal-cover {");
+    // Should have child overrides (condensed sizes)
+    expect(result.html).toContain("font-size: 9pt");
+    // Child overrides should come after parent (for cascade priority)
+    const titlePageIdx = result.html.indexOf(".title-page {");
+    const condensedIdx = result.html.lastIndexOf("font-size: 9pt");
+    expect(condensedIdx).toBeGreaterThan(titlePageIdx);
+  });
 });

@@ -133,6 +133,19 @@ Templates live in `templates/<name>/` and contain:
 
 Available variables in the template: `content`, `css`, `title`, `subtitle`, `author`, `date`, `titlePage`, `theme`, `pageSize`, `pageMargin`, plus any extra frontmatter fields.
 
+### CSS inheritance
+
+A template can extend another template's CSS by adding `/* @extends <parent> */` at the top of its `style.css`:
+
+```css
+/* @extends sethdev */
+/* Only overrides below — base styles inherited from sethdev */
+
+body { font-size: 9pt; }
+```
+
+The parent CSS loads first, then child overrides cascade on top.
+
 ## Stack
 
 Bun for everything. `gray-matter` for frontmatter, `marked` for markdown, `nunjucks` for templates, `pagedjs-cli` for PDF. No bundler config, no framework, no build step.

@@ -20,6 +20,26 @@ export interface RenderResult {
   frontmatter: Record<string, unknown>;
 }
 
+/** Load CSS with support for @extends directive */
+async function loadTemplateCss(templateDir: string, templateName: string): Promise<string> {
+  const stylePath = resolve(templateDir, templateName, "style.css");
+  const styleFile = Bun.file(stylePath);
+  if (!(await styleFile.exists())) return "";
+
+  const css = await styleFile.text();
+
+  // Check for @extends directive: /* @extends <parent-template> */
+  const extendsMatch = css.match(/^\/\*\s*@extends\s+([\w-]+)\s*\*\//);
+  if (extendsMatch) {
+    const parentName = extendsMatch[1];
+    const parentCss = await loadTemplateCss(templateDir, parentName);
+    const childCss = css.replace(/^\/\*\s*@extends\s+[\w-]+\s*\*\/\n?/, "");
+    return parentCss + "\n" + childCss;
+  }
+
+  return css;
+}
+
 /** Read a single markdown file and return frontmatter + body */
 async function readMarkdown(
   filePath: string
@@ -80,13 +100,8 @@ export async function render(opts: RenderOptions): Promise<RenderResult> {
     { autoescape: false }
   );
 
-  // Read template's style.css if it exists
-  let templateCss = "";
-  const stylePath = resolve(templatePath, "style.css");
-  const styleFile = Bun.file(stylePath);
-  if (await styleFile.exists()) {
-    templateCss = await styleFile.text();
-  }
+  // Read template's style.css (with @extends support)
+  const templateCss = await loadTemplateCss(opts.templateDir, opts.templateName);
 
   const html = env.render("template.njk", {
     content: contentHtml,

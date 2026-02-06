@@ -277,14 +277,14 @@ proposal-cover-title {
 .content h3::before {
   content: "// ";
   color: var(--teal);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.2em;
 }
 
 .content h1 {
   font-family: "Josefin Sans", sans-serif;
   font-size: 32pt;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--text-heading);
   margin-top: 1.8em;
@@ -294,7 +294,7 @@ proposal-cover-title {
 .content h2 {
   font-family: "Josefin Sans", sans-serif;
   font-size: 24pt;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.04em;
   color: var(--text-heading);
   margin-top: 1.5em;
@@ -305,7 +305,7 @@ proposal-cover-title {
 .content h3 {
   font-family: "Josefin Sans", sans-serif;
   font-size: 18pt;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.03em;
   color: var(--text-heading);
   margin-top: 1.2em;
