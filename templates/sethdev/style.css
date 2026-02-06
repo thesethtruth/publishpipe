@@ -1,3 +1,4 @@
+/* @extends base */
 /* ── sethdev template ──────────────────────────────────
    Dark navy + teal accent style matching sethdev.com
    Fonts: Josefin Sans (headings), Poppins (body)
@@ -427,14 +428,6 @@ a {
 .content td {
   padding: 0.5em 0.8em;
   border-bottom: 1px solid var(--border);
-}
-
-/* ── Horizontal rules ─────────────────────────────────── */
-
-.content hr {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 2em 0;
 }
 
 /* ── Strong & emphasis ────────────────────────────────── */

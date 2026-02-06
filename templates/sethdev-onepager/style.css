@@ -132,8 +132,3 @@ body {
   padding: 0.3em 0.6em;
 }
 
-/* ── Horizontal rules (reduced margin) ───────────────────── */
-
-.content hr {
-  margin: 1em 0;
-}

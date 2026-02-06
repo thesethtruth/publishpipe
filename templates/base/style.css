@@ -1,0 +1,14 @@
+/* ── Base template ────────────────────────────────────────
+   Shared styles inherited by all templates.
+   ──────────────────────────────────────────────────────── */
+
+/* ── Page breaks ─────────────────────────────────────────
+   Use --- (horizontal rule) in markdown to insert a page break.
+   ──────────────────────────────────────────────────────── */
+
+.content hr {
+  break-after: page;
+  border: none;
+  height: 0;
+  margin: 0;
+}

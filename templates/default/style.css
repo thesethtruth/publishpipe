@@ -1,3 +1,4 @@
+/* @extends base */
 /* Page setup — uses CSS custom properties from template */
 @page {
   size: var(--page-size, A4);
@@ -161,11 +162,6 @@ body {
   padding: 0;
 }
 
-.content hr {
-  border: none;
-  border-top: 1px solid #e5e5e5;
-  margin: 2em 0;
-}
 
 /* ── Print controls ─────────────────────────────────── */
 
@@ -226,9 +222,6 @@ h2, h3 {
   background: #2a2a2a;
 }
 
-[data-theme="dark"] .content hr {
-  border-top-color: #333;
-}
 
 [data-theme="dark"] @page {
   @top-left { color: #666; }

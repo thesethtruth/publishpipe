@@ -70,6 +70,18 @@ bun run build example-proposal      # -> projects/example-proposal/proposal.pdf
 
 Detection is simple: ends in `.md` = single file, otherwise = project name.
 
+## Page breaks
+
+Use `---` (horizontal rule) in your markdown to insert a page break:
+
+```md
+Content on page one.
+
+---
+
+Content on page two.
+```
+
 ## Frontmatter
 
 First file's YAML frontmatter becomes document metadata:
@@ -144,7 +156,7 @@ A template can extend another template's CSS by adding `/* @extends <parent> */`
 body { font-size: 9pt; }
 ```
 
-The parent CSS loads first, then child overrides cascade on top.
+The parent CSS loads first, then child overrides cascade on top. All built-in templates extend `base`, which provides shared behavior like `---` for page breaks.
 
 ## Stack
 
