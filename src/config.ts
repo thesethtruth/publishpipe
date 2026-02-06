@@ -16,13 +16,15 @@ export interface PublishPipeConfig {
   };
   /** Single markdown file path */
   content?: string;
-  /** Ordered list of markdown files (multi-chapter) */
+  /** Ordered list of markdown files (multi-chapter) - produces single PDF */
   chapters?: string[];
+  /** Glob patterns for multi-file output - each matched file becomes a separate PDF */
+  source?: string[];
   /** Show a Dutch proposal cover page (sethdev template) */
   proposal?: boolean;
   /** Default frontmatter values (overridden by markdown frontmatter) */
   frontmatter?: Record<string, unknown>;
-  /** Output PDF filename */
+  /** Output PDF filename. Use {{fn}} for source filename without extension. */
   output?: string;
 }
 

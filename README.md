@@ -114,10 +114,28 @@ export default defineConfig({
     margin: "2.5cm 2cm",     // CSS margin
   },
   content: "doc.md",         // single file path
-  chapters: ["ch1.md", ...], // ordered chapter files
-  output: "output.pdf",      // output filename
+  chapters: ["ch1.md", ...], // ordered chapter files -> single PDF
+  source: ["content/*.md"],  // glob patterns -> one PDF per file
+  output: "{{fn}}.pdf",      // output filename ({{fn}} = source filename)
 });
 ```
+
+## Multi-file output
+
+Use `source` instead of `chapters` when you want each markdown file to become its own PDF:
+
+```ts
+export default defineConfig({
+  source: ["content/*.md"],
+  output: "{{fn}}.pdf",
+});
+```
+
+- `source` takes an array of glob patterns
+- Each matched file becomes a separate PDF
+- Use `{{fn}}` in `output` for the source filename (without extension)
+
+Example: `content/notes-weekly-1.md` with output `report-{{fn}}.pdf` creates `report-notes-weekly-1.pdf`.
 
 ## CLI
 

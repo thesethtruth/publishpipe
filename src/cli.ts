@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { parseArgs } from "util";
 import { resolve, basename } from "path";
+import { Glob } from "bun";
 import { render } from "./render";
 import { startDevServer } from "./server";
 import { loadProjectConfig, type PublishPipeConfig } from "./config";
@@ -75,9 +76,9 @@ if (!command) {
   process.exit(1);
 }
 
-if (!markdownPath && !resolvedConfig.chapters?.length) {
+if (!markdownPath && !resolvedConfig.chapters?.length && !resolvedConfig.source?.length) {
   console.error(
-    "No content source. Provide a markdown file argument, a project name, or set content/chapters in publishpipe.config.ts"
+    "No content source. Provide a markdown file argument, a project name, or set content/chapters/source in publishpipe.config.ts"
   );
   process.exit(1);
 }
@@ -96,42 +97,90 @@ if (command === "dev") {
   const port = parseInt(values.port!, 10);
   startDevServer({ ...renderOpts, port });
 } else if (command === "build") {
-  const { html } = await render(renderOpts);
-
-  // Write HTML to temp file
   const tmpDir = await import("os").then((os) => os.tmpdir());
-  const tmpHtml = resolve(tmpDir, `publishpipe-${Date.now()}.html`);
-  await Bun.write(tmpHtml, html);
 
-  // Determine output path
-  const outputFilename =
-    resolvedConfig.output ??
-    (markdownPath ? basename(markdownPath, ".md") + ".pdf" : "output.pdf");
+  // Multi-file mode: source glob patterns
+  if (resolvedConfig.source?.length) {
+    const sourceFiles: string[] = [];
 
-  const outputPath = values.output
-    ? resolve(values.output) // CLI flag: resolve from cwd
-    : resolve(resolveBase, outputFilename); // config: resolve from project dir
-
-  console.log(`Building PDF: ${outputPath}`);
-
-  const proc = Bun.spawn(
-    ["bunx", "pagedjs-cli", tmpHtml, "-o", outputPath],
-    {
-      stdout: "inherit",
-      stderr: "inherit",
+    for (const pattern of resolvedConfig.source) {
+      const glob = new Glob(pattern);
+      for await (const file of glob.scan({ cwd: resolveBase, absolute: true })) {
+        sourceFiles.push(file);
+      }
     }
-  );
-  const exitCode = await proc.exited;
 
-  // Clean up
-  await Bun.file(tmpHtml).delete();
+    if (sourceFiles.length === 0) {
+      console.error("No files matched source patterns:", resolvedConfig.source);
+      process.exit(1);
+    }
 
-  if (exitCode !== 0) {
-    console.error("pagedjs-cli failed");
-    process.exit(exitCode);
+    console.log(`Found ${sourceFiles.length} source file(s)`);
+
+    for (const sourceFile of sourceFiles) {
+      const fn = basename(sourceFile, ".md");
+      const outputTemplate = resolvedConfig.output ?? "{{fn}}.pdf";
+      const outputFilename = outputTemplate.replace(/\{\{fn\}\}/g, fn);
+      const outputPath = values.output
+        ? resolve(values.output.replace(/\{\{fn\}\}/g, fn))
+        : resolve(resolveBase, outputFilename);
+
+      const { html } = await render({
+        ...renderOpts,
+        markdownPath: sourceFile,
+        config: { ...resolvedConfig, chapters: undefined },
+      });
+
+      const tmpHtml = resolve(tmpDir, `publishpipe-${Date.now()}-${fn}.html`);
+      await Bun.write(tmpHtml, html);
+
+      console.log(`Building PDF: ${outputPath}`);
+
+      const proc = Bun.spawn(
+        ["bunx", "pagedjs-cli", tmpHtml, "-o", outputPath],
+        { stdout: "inherit", stderr: "inherit" }
+      );
+      const exitCode = await proc.exited;
+      await Bun.file(tmpHtml).delete();
+
+      if (exitCode !== 0) {
+        console.error(`pagedjs-cli failed for ${fn}`);
+        process.exit(exitCode);
+      }
+
+      console.log(`PDF saved: ${outputPath}`);
+    }
+  } else {
+    // Single-file mode: chapters or content
+    const { html } = await render(renderOpts);
+
+    const tmpHtml = resolve(tmpDir, `publishpipe-${Date.now()}.html`);
+    await Bun.write(tmpHtml, html);
+
+    const outputFilename =
+      resolvedConfig.output ??
+      (markdownPath ? basename(markdownPath, ".md") + ".pdf" : "output.pdf");
+
+    const outputPath = values.output
+      ? resolve(values.output)
+      : resolve(resolveBase, outputFilename);
+
+    console.log(`Building PDF: ${outputPath}`);
+
+    const proc = Bun.spawn(
+      ["bunx", "pagedjs-cli", tmpHtml, "-o", outputPath],
+      { stdout: "inherit", stderr: "inherit" }
+    );
+    const exitCode = await proc.exited;
+    await Bun.file(tmpHtml).delete();
+
+    if (exitCode !== 0) {
+      console.error("pagedjs-cli failed");
+      process.exit(exitCode);
+    }
+
+    console.log(`PDF saved: ${outputPath}`);
   }
-
-  console.log(`PDF saved: ${outputPath}`);
 } else {
   console.error(`Unknown command: ${command}`);
   process.exit(1);
