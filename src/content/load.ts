@@ -3,9 +3,12 @@ import { Glob } from "bun";
 import { basename, resolve } from "path";
 import type { DocumentModel, SourceDocument } from "./model";
 
-async function readMarkdown(
-  filePath: string
-): Promise<{ frontmatter: Record<string, unknown>; body: string }> {
+export interface MarkdownDocument {
+  frontmatter: Record<string, unknown>;
+  body: string;
+}
+
+export async function readMarkdownFile(filePath: string): Promise<MarkdownDocument> {
   const raw = await Bun.file(filePath).text();
   const { data, content } = matter(raw);
   return { frontmatter: data, body: content };
@@ -23,8 +26,12 @@ export async function loadDocumentFromInput(opts: {
     let frontmatter: Record<string, unknown> = {};
 
     for (let i = 0; i < chapters.length; i++) {
-      const absPath = resolve(cwd, chapters[i]);
-      const { frontmatter: fm, body } = await readMarkdown(absPath);
+      const chapterPath = chapters[i];
+      if (!chapterPath) {
+        continue;
+      }
+      const absPath = resolve(cwd, chapterPath);
+      const { frontmatter: fm, body } = await readMarkdownFile(absPath);
       if (i === 0) {
         frontmatter = fm;
       }
@@ -38,11 +45,43 @@ export async function loadDocumentFromInput(opts: {
   }
 
   if (markdownPath) {
-    const { frontmatter, body } = await readMarkdown(markdownPath);
+    const { frontmatter, body } = await readMarkdownFile(markdownPath);
     return { frontmatter, markdown: body };
   }
 
   throw new Error("No content source: provide markdownPath or config.chapters");
+}
+
+export function splitMarkdownByH1(markdown: string): Array<{ title: string; markdown: string }> {
+  const lines = markdown.split("\n");
+  const sections: Array<{ title: string; markdown: string }> = [];
+  let currentTitle: string | null = null;
+  let currentLines: string[] = [];
+
+  for (const line of lines) {
+    const h1 = line.match(/^#\s+(.+)$/);
+    if (h1) {
+      if (currentTitle !== null) {
+        sections.push({
+          title: currentTitle,
+          markdown: currentLines.join("\n").trim(),
+        });
+      }
+      currentTitle = (h1[1] ?? "Section").trim();
+      currentLines = [line];
+    } else {
+      currentLines.push(line);
+    }
+  }
+
+  if (currentTitle !== null) {
+    sections.push({
+      title: currentTitle,
+      markdown: currentLines.join("\n").trim(),
+    });
+  }
+
+  return sections.filter((section) => section.markdown.length > 0);
 }
 
 export async function resolveSourceDocuments(

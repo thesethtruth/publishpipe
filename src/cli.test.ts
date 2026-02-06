@@ -194,9 +194,9 @@ describe("cli single-file mode", () => {
     expect(stderr).toContain("Invalid theme 'neon'");
   });
 
-  test("web command writes html output", async () => {
-    const outputPath = resolve(rootDir, "projects/example-proposal/proposal.html");
-    await rm(outputPath, { force: true });
+  test("web command defaults to multipage output", async () => {
+    const outDir = resolve(rootDir, "projects/example-proposal/proposal");
+    await rm(outDir, { recursive: true, force: true });
 
     const proc = Bun.spawn(["bun", "run", "src/cli.ts", "web", "example-proposal"], {
       cwd: rootDir,
@@ -208,7 +208,138 @@ describe("cli single-file mode", () => {
     const stdout = await new Response(proc.stdout).text();
 
     expect(exitCode).toBe(0);
+    expect(stdout).toContain("Wrote");
+    expect(await Bun.file(resolve(outDir, "index.html")).exists()).toBe(true);
+  });
+
+  test("web command can be forced to single-file output", async () => {
+    const outputPath = resolve(rootDir, "projects/example-proposal/proposal.html");
+    await rm(outputPath, { force: true });
+
+    const proc = Bun.spawn(
+      ["bun", "run", "src/cli.ts", "web", "example-proposal", "--multipage", "false", "--output", "proposal.html"],
+      {
+        cwd: rootDir,
+        stdout: "pipe",
+        stderr: "pipe",
+      }
+    );
+
+    const exitCode = await proc.exited;
+    const stdout = await new Response(proc.stdout).text();
+
+    expect(exitCode).toBe(0);
     expect(stdout).toContain("HTML saved:");
     expect(await Bun.file(outputPath).exists()).toBe(true);
+  });
+
+  test("web command can build multipage output", async () => {
+    const outDir = resolve(rootDir, "projects/example-proposal/site");
+    await rm(outDir, { recursive: true, force: true });
+
+    const proc = Bun.spawn(
+      ["bun", "run", "src/cli.ts", "web", "example-proposal", "--multipage", "true", "--output", "site"],
+      {
+        cwd: rootDir,
+        stdout: "pipe",
+        stderr: "pipe",
+      }
+    );
+
+    const exitCode = await proc.exited;
+    const stdout = await new Response(proc.stdout).text();
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("Wrote");
+    expect(await Bun.file(resolve(outDir, "index.html")).exists()).toBe(true);
+    const files = await Array.fromAsync(new Bun.Glob("*.html").scan({ cwd: outDir }));
+    expect(files.length).toBeGreaterThan(1);
+
+    const indexHtml = await Bun.file(resolve(outDir, "index.html")).text();
+    expect(indexHtml).toContain("doc-page-nav");
+    expect(indexHtml).toContain("doc-pages-menu");
+    expect(indexHtml).toContain("Contents");
+  });
+});
+
+describe("cli project scaffolding", () => {
+  const newProjectName = "_test-new-project";
+  const newProjectDir = resolve(rootDir, "projects", newProjectName);
+
+  afterAll(async () => {
+    await rm(newProjectDir, { recursive: true, force: true });
+  });
+
+  test("new command creates a bootstrapped project", async () => {
+    await rm(newProjectDir, { recursive: true, force: true });
+
+    const proc = Bun.spawn(["bun", "run", "src/cli.ts", "new", newProjectName], {
+      cwd: rootDir,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const exitCode = await proc.exited;
+    const stdout = await new Response(proc.stdout).text();
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("Created project");
+    expect(await Bun.file(resolve(newProjectDir, "publishpipe.config.ts")).exists()).toBe(true);
+    expect(await Bun.file(resolve(newProjectDir, "content/01-intro.md")).exists()).toBe(true);
+
+    const configText = await Bun.file(resolve(newProjectDir, "publishpipe.config.ts")).text();
+    expect(configText).toContain("multipage: true");
+    expect(configText).toContain('splitOn: "both"');
+  });
+});
+
+describe("cli multipage proposal cover", () => {
+  const proposalProject = resolve(rootDir, "projects/_test-proposal-site");
+
+  beforeAll(async () => {
+    await mkdir(resolve(proposalProject, "content"), { recursive: true });
+    await Bun.write(
+      resolve(proposalProject, "publishpipe.config.ts"),
+      `import { defineConfig } from "../../src/config";
+
+export default defineConfig({
+  template: "sethdev",
+  proposal: true,
+  chapters: ["content/01.md", "content/02.md"],
+  web: { multipage: true, splitOn: "both" },
+  frontmatter: {
+    bedrijf: "Sender BV",
+    klant: "Receiver BV",
+    offertedatum: "6 februari 2026",
+  },
+});
+`
+    );
+    await Bun.write(resolve(proposalProject, "content/01.md"), "# Intro\n\nOne.\n");
+    await Bun.write(resolve(proposalProject, "content/02.md"), "# Scope\n\nTwo.\n");
+  });
+
+  afterAll(async () => {
+    await rm(proposalProject, { recursive: true, force: true });
+  });
+
+  test("proposal cover renders as separate first page in multipage web output", async () => {
+    const outDir = resolve(proposalProject, "site");
+    await rm(outDir, { recursive: true, force: true });
+
+    const proc = Bun.spawn(["bun", "run", "src/cli.ts", "web", "_test-proposal-site", "--output", "site"], {
+      cwd: rootDir,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const exitCode = await proc.exited;
+    expect(exitCode).toBe(0);
+
+    const indexHtml = await Bun.file(resolve(outDir, "index.html")).text();
+    expect(indexHtml).toContain("proposal-cover");
+
+    const files = await Array.fromAsync(new Bun.Glob("*.html").scan({ cwd: outDir }));
+    expect(files.length).toBeGreaterThan(2);
   });
 });

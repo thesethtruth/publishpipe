@@ -1,7 +1,7 @@
 import { test, expect, describe, beforeAll, afterAll } from "bun:test";
 import { mkdir, rm } from "fs/promises";
 import { resolve } from "path";
-import { loadDocumentFromInput, resolveSourceDocuments } from "./load";
+import { loadDocumentFromInput, resolveSourceDocuments, splitMarkdownByH1 } from "./load";
 
 const rootDir = resolve(import.meta.dir, "../..");
 const fixtureDir = resolve(rootDir, "projects/_test-content-model");
@@ -48,5 +48,16 @@ title: Combined
 
     expect(paths.length).toBe(2);
     expect(new Set(paths).size).toBe(2);
+  });
+
+  test("splits markdown into sections on H1 headings", () => {
+    const sections = splitMarkdownByH1(`# One\nA\n\n## Child\nB\n\n# Two\nC\n`);
+    expect(sections.length).toBe(2);
+    const first = sections.at(0);
+    const second = sections.at(1);
+    expect(first).toBeDefined();
+    expect(second).toBeDefined();
+    expect(first?.title).toBe("One");
+    expect(second?.title).toBe("Two");
   });
 });

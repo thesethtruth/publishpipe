@@ -28,6 +28,13 @@ export interface PublishPipeConfig {
   proposal?: boolean;
   /** Show generated table of contents wrappers for interactive/pdf renderers */
   toc?: boolean;
+  /** Interactive web output options */
+  web?: {
+    /** Emit multiple linked HTML pages instead of one file */
+    multipage?: boolean;
+    /** Split strategy for multipage output */
+    splitOn?: "chapters" | "h1" | "both";
+  };
   /** Default frontmatter values (overridden by markdown frontmatter) */
   frontmatter?: Record<string, unknown>;
   /** Output PDF filename. Use {{fn}} for source filename without extension. */

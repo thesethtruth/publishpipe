@@ -28,6 +28,9 @@ export async function loadTemplateCss(
   }
 
   const parentName = extendsMatch[1];
+  if (!parentName) {
+    return css;
+  }
   const parentCss = await loadTemplateCss(templateDir, parentName, [...stack, templateName]);
   const childCss = css.replace(/^\/\*\s*@extends\s+[\w-]+\s*\*\/\n?/, "");
   return `${parentCss}\n${childCss}`;

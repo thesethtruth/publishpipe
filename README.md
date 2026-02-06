@@ -40,8 +40,10 @@ Pipeline: **Markdown** -> **Content model** -> **Presentation model** -> **HTML 
 ### Profile behavior
 
 - `interactive` profile:
-  - Heading IDs + floating TOC sidebar.
+  - Heading IDs + sticky context header with TOC menu.
   - Output optimized for web/static hosting.
+  - Optional multipage site mode (split by chapters or H1).
+  - In multipage mode: page navigation on the left (desktop) and TOC in sticky header menu.
 - `pdf` profile:
   - Heading IDs + generated contents page.
   - Output optimized for paged media.
@@ -159,6 +161,10 @@ export default defineConfig({
   source: ["content/*.md"],
   output: "{{fn}}.pdf", // use {{fn}} for multi-source
   toc: true,
+  web: {
+    multipage: true, // default for web output
+    splitOn: "both", // "chapters" | "h1" | "both"
+  },
 });
 ```
 
@@ -174,6 +180,7 @@ export default defineConfig({
 ```
 
 `publishpipe` deduplicates overlapping globs and fails fast if multiple files resolve to the same output filename.
+In multipage web mode with `proposal: true`, a dedicated proposal-cover page is generated as the first page.
 
 ## CLI
 
@@ -181,6 +188,7 @@ export default defineConfig({
 publishpipe dev [target] [options]      # hot-reload preview server
 publishpipe build [target] [options]    # generate PDF
 publishpipe web [target] [options]      # generate static HTML
+publishpipe new <project-name>          # scaffold a project
 ```
 
 Flags:
@@ -191,7 +199,21 @@ Flags:
 - `--title-page` enable title page
 - `--proposal` enable proposal cover (template-specific)
 - `--theme <light|dark>` validated theme value
+- `--multipage <true|false>` toggle linked multi-page HTML output (`true` default)
+- `--split-on <chapters|h1|both>` multipage split strategy (`both` default)
 - `toc: false` in config disables generated TOC wrappers/pages
+
+Multipage web example:
+
+```bash
+bun run web example-proposal --multipage true --split-on chapters --output site
+```
+
+Scaffold a new project:
+
+```bash
+bun run src/cli.ts new my-proposal
+```
 
 ## Templates
 
