@@ -1,5 +1,7 @@
 import { test, expect, describe } from "bun:test";
 import { resolve } from "path";
+import { mkdir, rm } from "fs/promises";
+import { tmpdir } from "os";
 import { loadConfig, loadProjectConfig, defineConfig } from "./config";
 
 const rootDir = resolve(import.meta.dir, "..");
@@ -68,5 +70,48 @@ describe("loadProjectConfig", () => {
     // root sets page.size and page.margin, project doesn't override
     expect(config.page?.size).toBe("A4");
     expect(config.page?.margin).toBe("2.5cm 2cm");
+  });
+
+  test("merges variables from root and project configs", async () => {
+    const tempRoot = resolve(tmpdir(), `publishpipe-config-test-${Date.now()}`);
+    const tempProject = resolve(tempRoot, "projects", "vars-project");
+    await mkdir(tempProject, { recursive: true });
+
+    await Bun.write(
+      resolve(tempRoot, "publishpipe.config.ts"),
+      `import { defineConfig } from "${resolve(rootDir, "src/config.ts").replace(/\\/g, "/")}";
+
+export default defineConfig({
+  variables: {
+    company: "Root BV",
+    city: "Utrecht",
+  },
+});
+`
+    );
+
+    await Bun.write(
+      resolve(tempProject, "publishpipe.config.ts"),
+      `import { defineConfig } from "${resolve(rootDir, "src/config.ts").replace(/\\/g, "/")}";
+
+export default defineConfig({
+  variables: {
+    city: "Amsterdam",
+    contact: "hello@example.com",
+  },
+});
+`
+    );
+
+    try {
+      const config = await loadProjectConfig(tempRoot, tempProject);
+      expect(config.variables).toEqual({
+        company: "Root BV",
+        city: "Amsterdam",
+        contact: "hello@example.com",
+      });
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
   });
 });

@@ -116,6 +116,9 @@ export default defineConfig({
   content: "doc.md",         // single file path
   chapters: ["ch1.md", ...], // ordered chapter files -> single PDF
   source: ["content/*.md"],  // glob patterns -> one PDF per file
+  variables: {               // global variables available everywhere
+    contact_email: "hello@acme.com",
+  },
   output: "{{fn}}.pdf",      // output filename ({{fn}} = source filename)
 });
 ```
@@ -137,6 +140,38 @@ export default defineConfig({
 - Use `--name <filename>` to build only one matched file (`.md` optional)
 
 Example: `content/notes-weekly-1.md` with output `report-{{fn}}.pdf` creates `report-notes-weekly-1.pdf`.
+
+## Variables in Markdown and Filenames
+
+You can use variables in markdown content and in `output`/`--output` filename templates.
+
+Variable precedence:
+- `variables` from config (root + project merged)
+- `frontmatter` defaults from config
+- file frontmatter (highest, overrides config values)
+
+Example:
+
+```ts
+export default defineConfig({
+  variables: {
+    klantnaam: "ACME BV",
+    vervaldatum: "21-02-2026", // DD-MM-YYYY is parsed as date
+  },
+  output: "offerte-{{klantnaam}}-{{vervaldatum | format(\"YYYYMMDD\")}}-{{fn}}.pdf",
+});
+```
+
+```md
+# Offerte voor {{klantnaam}}
+
+Geldig tot {{vervaldatum | format("DD-MM-YYYY")}}.
+```
+
+Date formatting filter:
+- `{{ someDate | format }}` -> default `DD-MM-YYYY`
+- `{{ someDate | format("YYYYMMDD") }}`
+- `{{ someDate | format("D MMMM YYYY") }}`
 
 ## CLI
 

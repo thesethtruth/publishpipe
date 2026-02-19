@@ -1,5 +1,7 @@
 import { test, expect, describe } from "bun:test";
 import { resolve } from "path";
+import { mkdir, rm } from "fs/promises";
+import { tmpdir } from "os";
 import { render } from "./render";
 
 const rootDir = resolve(import.meta.dir, "..");
@@ -188,5 +190,42 @@ describe("render", () => {
     const titlePageIdx = result.html.indexOf(".title-page {");
     const condensedIdx = result.html.lastIndexOf("font-size: 9pt");
     expect(condensedIdx).toBeGreaterThan(titlePageIdx);
+  });
+
+  test("renders markdown variables from config and frontmatter", async () => {
+    const tempDir = resolve(tmpdir(), `publishpipe-render-test-${Date.now()}`);
+    await mkdir(tempDir, { recursive: true });
+    const markdownPath = resolve(tempDir, "vars.md");
+
+    await Bun.write(
+      markdownPath,
+      `---
+title: Variables Test
+klantnaam: Frontmatter BV
+---
+
+# Hallo {{klantnaam}}
+Geldig tot {{vervaldatum | format("YYYY/MM/DD")}}.
+`
+    );
+
+    try {
+      const result = await render({
+        markdownPath,
+        templateDir,
+        templateName: "default",
+        config: {
+          variables: {
+            klantnaam: "Config BV",
+            vervaldatum: "21-02-2026",
+          },
+        },
+      });
+
+      expect(result.html).toContain("Hallo Frontmatter BV");
+      expect(result.html).toContain("Geldig tot 2026/02/21");
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 });

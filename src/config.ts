@@ -24,7 +24,9 @@ export interface PublishPipeConfig {
   proposal?: boolean;
   /** Default frontmatter values (overridden by markdown frontmatter) */
   frontmatter?: Record<string, unknown>;
-  /** Output PDF filename. Use {{fn}} for source filename without extension. */
+  /** Global template variables (overridden by frontmatter) */
+  variables?: Record<string, unknown>;
+  /** Output PDF filename template. Use variables like {{fn}} and {{date | format("YYYYMMDD")}}. */
   output?: string;
 }
 
@@ -68,5 +70,6 @@ export async function loadProjectConfig(
     ...projectConfig,
     page: { ...rootConfig.page, ...projectConfig.page },
     frontmatter: { ...rootConfig.frontmatter, ...projectConfig.frontmatter },
+    variables: { ...rootConfig.variables, ...projectConfig.variables },
   };
 }

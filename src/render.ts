@@ -3,6 +3,7 @@ import { marked } from "marked";
 import nunjucks from "nunjucks";
 import { resolve } from "path";
 import type { PublishPipeConfig } from "./config";
+import { createTemplateEnvironment, resolveTemplateVariables } from "./variables";
 
 export interface RenderOptions {
   /** Single markdown file path (used when no chapters) */
@@ -13,11 +14,14 @@ export interface RenderOptions {
   config?: PublishPipeConfig;
   /** Base directory for resolving relative chapter paths */
   cwd?: string;
+  /** Extra variables available in markdown/template rendering (e.g. fn) */
+  variables?: Record<string, unknown>;
 }
 
 export interface RenderResult {
   html: string;
   frontmatter: Record<string, unknown>;
+  variables: Record<string, unknown>;
 }
 
 /** Load CSS with support for @extends directive */
@@ -90,15 +94,16 @@ export async function render(opts: RenderOptions): Promise<RenderResult> {
     throw new Error("No content source: provide markdownPath or config.chapters");
   }
 
-  // Convert markdown to HTML
-  const contentHtml = await marked(mdBody);
+  const templateVars = resolveTemplateVariables(config, frontmatter, opts.variables);
+
+  // Render markdown as a template first, then convert markdown to HTML
+  const markdownEnv = createTemplateEnvironment();
+  const renderedMdBody = markdownEnv.renderString(mdBody, templateVars);
+  const contentHtml = await marked(renderedMdBody);
 
   // Load and render Nunjucks template
   const templatePath = resolve(opts.templateDir, opts.templateName);
-  const env = new nunjucks.Environment(
-    new nunjucks.FileSystemLoader(templatePath),
-    { autoescape: false }
-  );
+  const env = createTemplateEnvironment(new nunjucks.FileSystemLoader(templatePath));
 
   // Read template's style.css (with @extends support)
   const templateCss = await loadTemplateCss(opts.templateDir, opts.templateName);
@@ -111,9 +116,8 @@ export async function render(opts: RenderOptions): Promise<RenderResult> {
     theme: config.theme ?? "light",
     pageSize: config.page?.size ?? "A4",
     pageMargin: config.page?.margin ?? "2.5cm 2cm 2cm 2cm",
-    ...config.frontmatter,
-    ...frontmatter,
+    ...templateVars,
   });
 
-  return { html, frontmatter };
+  return { html, frontmatter, variables: templateVars };
 }

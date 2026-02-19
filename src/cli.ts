@@ -6,6 +6,7 @@ import { render } from "./render";
 import { startDevServer } from "./server";
 import { loadProjectConfig, type PublishPipeConfig } from "./config";
 import { filterSourceFilesByName } from "./source-filter";
+import { renderTemplateString } from "./variables";
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),
@@ -95,6 +96,19 @@ const renderOpts = {
   cwd: resolveBase,
 };
 
+async function buildPdfFromHtml(tmpHtml: string, outputPath: string): Promise<number> {
+  if (process.env.PUBLISHPIPE_MOCK_PDF === "1") {
+    await Bun.write(outputPath, "%PDF-1.4\n% mock pdf generated in test mode\n");
+    return 0;
+  }
+
+  const proc = Bun.spawn(
+    ["bunx", "pagedjs-cli", tmpHtml, "-o", outputPath],
+    { stdout: "inherit", stderr: "inherit" }
+  );
+  return await proc.exited;
+}
+
 if (command === "dev") {
   const port = parseInt(values.port!, 10);
   startDevServer({ ...renderOpts, port });
@@ -132,28 +146,24 @@ if (command === "dev") {
 
     for (const sourceFile of sourceFiles) {
       const fn = basename(sourceFile, ".md");
-      const outputTemplate = resolvedConfig.output ?? "{{fn}}.pdf";
-      const outputFilename = outputTemplate.replace(/\{\{fn\}\}/g, fn);
-      const outputPath = values.output
-        ? resolve(values.output.replace(/\{\{fn\}\}/g, fn))
-        : resolve(resolveBase, outputFilename);
-
-      const { html } = await render({
+      const { html, variables } = await render({
         ...renderOpts,
         markdownPath: sourceFile,
+        variables: { fn },
         config: { ...resolvedConfig, chapters: undefined },
       });
+      const outputTemplate = values.output ?? resolvedConfig.output ?? "{{fn}}.pdf";
+      const outputFilename = renderTemplateString(outputTemplate, variables);
+      const outputPath = values.output
+        ? resolve(outputFilename)
+        : resolve(resolveBase, outputFilename);
 
       const tmpHtml = resolve(tmpDir, `publishpipe-${Date.now()}-${fn}.html`);
       await Bun.write(tmpHtml, html);
 
       console.log(`Building PDF: ${outputPath}`);
 
-      const proc = Bun.spawn(
-        ["bunx", "pagedjs-cli", tmpHtml, "-o", outputPath],
-        { stdout: "inherit", stderr: "inherit" }
-      );
-      const exitCode = await proc.exited;
+      const exitCode = await buildPdfFromHtml(tmpHtml, outputPath);
       await Bun.file(tmpHtml).delete();
 
       if (exitCode !== 0) {
@@ -165,26 +175,28 @@ if (command === "dev") {
     }
   } else {
     // Single-file mode: chapters or content
-    const { html } = await render(renderOpts);
+    const singleFn = markdownPath ? basename(markdownPath, ".md") : undefined;
+    const { html, variables } = await render({
+      ...renderOpts,
+      variables: singleFn ? { fn: singleFn } : undefined,
+    });
 
     const tmpHtml = resolve(tmpDir, `publishpipe-${Date.now()}.html`);
     await Bun.write(tmpHtml, html);
 
-    const outputFilename =
+    const outputTemplate =
+      values.output ??
       resolvedConfig.output ??
-      (markdownPath ? basename(markdownPath, ".md") + ".pdf" : "output.pdf");
+      (singleFn ? "{{fn}}.pdf" : "output.pdf");
+    const outputFilename = renderTemplateString(outputTemplate, variables);
 
     const outputPath = values.output
-      ? resolve(values.output)
+      ? resolve(outputFilename)
       : resolve(resolveBase, outputFilename);
 
     console.log(`Building PDF: ${outputPath}`);
 
-    const proc = Bun.spawn(
-      ["bunx", "pagedjs-cli", tmpHtml, "-o", outputPath],
-      { stdout: "inherit", stderr: "inherit" }
-    );
-    const exitCode = await proc.exited;
+    const exitCode = await buildPdfFromHtml(tmpHtml, outputPath);
     await Bun.file(tmpHtml).delete();
 
     if (exitCode !== 0) {

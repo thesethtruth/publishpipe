@@ -1,7 +1,7 @@
 import { test, expect, describe, beforeAll, afterAll } from "bun:test";
 import { resolve, basename } from "path";
-import { Glob } from "bun";
 import { mkdir, rm } from "fs/promises";
+import { renderTemplateString } from "./variables";
 
 const rootDir = resolve(import.meta.dir, "..");
 const testProjectDir = resolve(rootDir, "projects/_test-multi-source");
@@ -15,6 +15,8 @@ describe("cli multi-file source", () => {
       resolve(testProjectDir, "content/doc-alpha.md"),
       `---
 title: Alpha Document
+klantnaam: Alpha-BV
+vervaldatum: 21-02-2026
 ---
 
 # Alpha
@@ -27,6 +29,8 @@ Content for alpha.
       resolve(testProjectDir, "content/doc-beta.md"),
       `---
 title: Beta Document
+klantnaam: Beta-BV
+vervaldatum: 28-02-2026
 ---
 
 # Beta
@@ -53,7 +57,7 @@ Some notes.
 
 export default defineConfig({
   source: ["content/doc-*.md"],
-  output: "output-{{fn}}.pdf",
+  output: "output-{{klantnaam}}-{{vervaldatum | format(\\"YYYYMMDD\\")}}-{{fn}}.pdf",
   template: "default",
 });
 `
@@ -69,6 +73,7 @@ export default defineConfig({
       ["bun", "run", "src/cli.ts", "build", "_test-multi-source"],
       {
         cwd: rootDir,
+        env: { ...process.env, PUBLISHPIPE_MOCK_PDF: "1" },
         stdout: "pipe",
         stderr: "pipe",
       }
@@ -79,12 +84,12 @@ export default defineConfig({
 
     expect(exitCode).toBe(0);
     expect(stdout).toContain("Found 2 source file(s)");
-    expect(stdout).toContain("output-doc-alpha.pdf");
-    expect(stdout).toContain("output-doc-beta.pdf");
+    expect(stdout).toContain("output-Alpha-BV-20260221-doc-alpha.pdf");
+    expect(stdout).toContain("output-Beta-BV-20260228-doc-beta.pdf");
 
     // Verify PDFs were created
-    const alphaPdf = Bun.file(resolve(testProjectDir, "output-doc-alpha.pdf"));
-    const betaPdf = Bun.file(resolve(testProjectDir, "output-doc-beta.pdf"));
+    const alphaPdf = Bun.file(resolve(testProjectDir, "output-Alpha-BV-20260221-doc-alpha.pdf"));
+    const betaPdf = Bun.file(resolve(testProjectDir, "output-Beta-BV-20260228-doc-beta.pdf"));
     expect(await alphaPdf.exists()).toBe(true);
     expect(await betaPdf.exists()).toBe(true);
 
@@ -94,13 +99,14 @@ export default defineConfig({
   }, 30000);
 
   test("builds only one PDF when using --name", async () => {
-    await rm(resolve(testProjectDir, "output-doc-alpha.pdf"), { force: true });
-    await rm(resolve(testProjectDir, "output-doc-beta.pdf"), { force: true });
+    await rm(resolve(testProjectDir, "output-Alpha-BV-20260221-doc-alpha.pdf"), { force: true });
+    await rm(resolve(testProjectDir, "output-Beta-BV-20260228-doc-beta.pdf"), { force: true });
 
     const proc = Bun.spawn(
       ["bun", "run", "src/cli.ts", "build", "_test-multi-source", "--name", "doc-alpha"],
       {
         cwd: rootDir,
+        env: { ...process.env, PUBLISHPIPE_MOCK_PDF: "1" },
         stdout: "pipe",
         stderr: "pipe",
       }
@@ -111,11 +117,11 @@ export default defineConfig({
 
     expect(exitCode).toBe(0);
     expect(stdout).toContain("Found 1 source file(s)");
-    expect(stdout).toContain("output-doc-alpha.pdf");
-    expect(stdout).not.toContain("output-doc-beta.pdf");
+    expect(stdout).toContain("output-Alpha-BV-20260221-doc-alpha.pdf");
+    expect(stdout).not.toContain("output-Beta-BV-20260228-doc-beta.pdf");
 
-    const alphaPdf = Bun.file(resolve(testProjectDir, "output-doc-alpha.pdf"));
-    const betaPdf = Bun.file(resolve(testProjectDir, "output-doc-beta.pdf"));
+    const alphaPdf = Bun.file(resolve(testProjectDir, "output-Alpha-BV-20260221-doc-alpha.pdf"));
+    const betaPdf = Bun.file(resolve(testProjectDir, "output-Beta-BV-20260228-doc-beta.pdf"));
     expect(await alphaPdf.exists()).toBe(true);
     expect(await betaPdf.exists()).toBe(false);
   }, 30000);
@@ -125,6 +131,7 @@ export default defineConfig({
       ["bun", "run", "src/cli.ts", "build", "_test-multi-source", "--name", "missing-file"],
       {
         cwd: rootDir,
+        env: { ...process.env, PUBLISHPIPE_MOCK_PDF: "1" },
         stdout: "pipe",
         stderr: "pipe",
       }
@@ -137,17 +144,27 @@ export default defineConfig({
     expect(stderr).toContain('No source file matched --name "missing-file"');
   }, 30000);
 
-  test("{{fn}} replacement in output filename", () => {
-    // Unit test for the template replacement logic
+  test("variable replacement in output filename", () => {
     const testCases = [
-      { fn: "doc-alpha", template: "{{fn}}.pdf", expected: "doc-alpha.pdf" },
-      { fn: "notes-weekly", template: "report-{{fn}}.pdf", expected: "report-notes-weekly.pdf" },
-      { fn: "test", template: "prefix-{{fn}}-suffix.pdf", expected: "prefix-test-suffix.pdf" },
-      { fn: "file", template: "{{fn}}-{{fn}}.pdf", expected: "file-file.pdf" },
+      {
+        vars: { fn: "doc-alpha" },
+        template: "{{fn}}.pdf",
+        expected: "doc-alpha.pdf",
+      },
+      {
+        vars: { fn: "notes-weekly" },
+        template: "report-{{fn}}.pdf",
+        expected: "report-notes-weekly.pdf",
+      },
+      {
+        vars: { fn: "test", klantnaam: "Acme", vervaldatum: "18-02-2026" },
+        template: "{{klantnaam}}-{{vervaldatum | format(\"YYYYMMDD\")}}-{{fn}}.pdf",
+        expected: "Acme-20260218-test.pdf",
+      },
     ];
 
-    for (const { fn, template, expected } of testCases) {
-      const result = template.replace(/\{\{fn\}\}/g, fn);
+    for (const { vars, template, expected } of testCases) {
+      const result = renderTemplateString(template, vars);
       expect(result).toBe(expected);
     }
   });
@@ -172,6 +189,7 @@ describe("cli single-file mode", () => {
       ["bun", "run", "src/cli.ts", "build", "example-proposal"],
       {
         cwd: rootDir,
+        env: { ...process.env, PUBLISHPIPE_MOCK_PDF: "1" },
         stdout: "pipe",
         stderr: "pipe",
       }
