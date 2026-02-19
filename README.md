@@ -167,7 +167,7 @@ Example:
 export default defineConfig({
   variables: {
     klantnaam: "ACME BV",
-    vervaldatum: "21-02-2026", // DD-MM-YYYY is parsed as date
+    vervaldatum: "21-02-2026", // DD-MM-YYYY, usable with | format(...)
   },
   output: "offerte-{{klantnaam}}-{{vervaldatum | format(\"YYYYMMDD\")}}-{{fn}}.pdf",
 });

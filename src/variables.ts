@@ -22,21 +22,6 @@ function parseDdMmYyyy(value: string): Date | null {
   return date;
 }
 
-function coerceTemplateValue(value: unknown): unknown {
-  if (typeof value === "string") {
-    return parseDdMmYyyy(value) ?? value;
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => coerceTemplateValue(item));
-  }
-  if (value && typeof value === "object" && !(value instanceof Date)) {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, nested]) => [key, coerceTemplateValue(nested)])
-    );
-  }
-  return value;
-}
-
 function pad(value: number): string {
   return String(value).padStart(2, "0");
 }
@@ -96,8 +81,7 @@ export function createTemplateEnvironment(loader?: nunjucks.Loader): nunjucks.En
 export function resolveTemplateVariables(
   ...layers: Array<Record<string, unknown> | undefined>
 ): Record<string, unknown> {
-  const merged = Object.assign({}, ...layers.filter(Boolean));
-  return coerceTemplateValue(merged) as Record<string, unknown>;
+  return Object.assign({}, ...layers.filter(Boolean));
 }
 
 export function renderTemplateString(
