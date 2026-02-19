@@ -53,52 +53,56 @@ async function readMarkdown(
   return { frontmatter: data, body: content };
 }
 
-/** Read and concatenate multiple chapter files. First file's frontmatter is used as document metadata. */
+/** Read chapter files in order with their own frontmatter/body. */
 async function readChapters(
   chapterPaths: string[],
   cwd: string
-): Promise<{ frontmatter: Record<string, unknown>; body: string }> {
-  const bodies: string[] = [];
-  let frontmatter: Record<string, unknown> = {};
+): Promise<Array<{ frontmatter: Record<string, unknown>; body: string }>> {
+  const chapters: Array<{ frontmatter: Record<string, unknown>; body: string }> = [];
 
   for (let i = 0; i < chapterPaths.length; i++) {
     const absPath = resolve(cwd, chapterPaths[i]);
     const { frontmatter: fm, body } = await readMarkdown(absPath);
-
-    if (i === 0) {
-      frontmatter = fm;
-    }
-
-    bodies.push(body);
+    chapters.push({ frontmatter: fm, body });
   }
 
-  return { frontmatter, body: bodies.join("\n\n---\n\n") };
+  return chapters;
 }
 
 export async function render(opts: RenderOptions): Promise<RenderResult> {
   const config = opts.config ?? {};
   let frontmatter: Record<string, unknown>;
-  let mdBody: string;
+  let templateVars: Record<string, unknown>;
+  let renderedMdBody: string;
+  const markdownEnv = createTemplateEnvironment();
 
   if (config.chapters?.length) {
     // Multi-chapter mode
-    const result = await readChapters(config.chapters, opts.cwd ?? process.cwd());
-    frontmatter = result.frontmatter;
-    mdBody = result.body;
+    const chapters = await readChapters(config.chapters, opts.cwd ?? process.cwd());
+    frontmatter = chapters[0]?.frontmatter ?? {};
+
+    // Precedence per chapter:
+    // config variables (root+project merged) -> first chapter frontmatter -> chapter frontmatter -> runtime vars
+    const baseVars = resolveTemplateVariables(config.variables, frontmatter);
+    const chapterBodies = chapters.map((chapter) =>
+      markdownEnv.renderString(
+        chapter.body,
+        resolveTemplateVariables(baseVars, chapter.frontmatter, opts.variables)
+      )
+    );
+    renderedMdBody = chapterBodies.join("\n\n---\n\n");
+    templateVars = resolveTemplateVariables(baseVars, opts.variables);
   } else if (opts.markdownPath) {
     // Single-file mode
     const result = await readMarkdown(opts.markdownPath);
     frontmatter = result.frontmatter;
-    mdBody = result.body;
+    templateVars = resolveTemplateVariables(config.variables, frontmatter, opts.variables);
+    renderedMdBody = markdownEnv.renderString(result.body, templateVars);
   } else {
     throw new Error("No content source: provide markdownPath or config.chapters");
   }
 
-  const templateVars = resolveTemplateVariables(config, frontmatter, opts.variables);
-
-  // Render markdown as a template first, then convert markdown to HTML
-  const markdownEnv = createTemplateEnvironment();
-  const renderedMdBody = markdownEnv.renderString(mdBody, templateVars);
+  // Convert templated markdown to HTML
   const contentHtml = await marked(renderedMdBody);
 
   // Load and render Nunjucks template

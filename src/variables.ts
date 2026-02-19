@@ -1,5 +1,4 @@
 import nunjucks from "nunjucks";
-import type { PublishPipeConfig } from "./config";
 
 const DATE_DD_MM_YYYY_RE = /^(\d{2})-(\d{2})-(\d{4})$/;
 
@@ -95,16 +94,10 @@ export function createTemplateEnvironment(loader?: nunjucks.Loader): nunjucks.En
 }
 
 export function resolveTemplateVariables(
-  config: PublishPipeConfig,
-  frontmatter: Record<string, unknown>,
-  extra: Record<string, unknown> = {}
+  ...layers: Array<Record<string, unknown> | undefined>
 ): Record<string, unknown> {
-  return coerceTemplateValue({
-    ...config.variables,
-    ...config.frontmatter,
-    ...frontmatter,
-    ...extra,
-  }) as Record<string, unknown>;
+  const merged = Object.assign({}, ...layers.filter(Boolean));
+  return coerceTemplateValue(merged) as Record<string, unknown>;
 }
 
 export function renderTemplateString(

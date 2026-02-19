@@ -108,14 +108,14 @@ describe("render", () => {
     expect(result.html).toContain("document-header");
   });
 
-  test("config frontmatter provides default template variables", async () => {
+  test("config variables provide default template variables", async () => {
     const result = await render({
       markdownPath: resolve(projectDir, "content/01-intro.md"),
       templateDir,
       templateName: "sethdev",
       config: {
         proposal: true,
-        frontmatter: {
+        variables: {
           bedrijf: "Test BV",
           plaats: "Amsterdam",
         },
@@ -127,7 +127,7 @@ describe("render", () => {
     expect(result.html).toContain("proposal-cover");
   });
 
-  test("file frontmatter overrides config frontmatter", async () => {
+  test("file frontmatter overrides config variables", async () => {
     // 01-intro.md has title: "Project Proposal" in frontmatter
     const result = await render({
       markdownPath: resolve(projectDir, "content/01-intro.md"),
@@ -135,17 +135,17 @@ describe("render", () => {
       templateName: "sethdev",
       config: {
         proposal: true,
-        frontmatter: {
+        variables: {
           title: "Should Be Overridden",
           bedrijf: "Config BV",
         },
       },
     });
 
-    // file frontmatter title wins over config frontmatter title
+    // file frontmatter title wins over config variables title
     expect(result.html).toContain("Project Proposal");
     expect(result.html).not.toContain("Should Be Overridden");
-    // config frontmatter still provides values not in file
+    // config variables still provide values not in file
     expect(result.html).toContain("Config BV");
   });
 
@@ -156,7 +156,7 @@ describe("render", () => {
       templateName: "sethdev",
       config: {
         proposal: true,
-        frontmatter: {
+        variables: {
           bedrijf: "Afzender BV",
           klant: "Ontvanger BV",
           offertedatum: "5 februari 2026",
@@ -224,6 +224,59 @@ Geldig tot {{vervaldatum | format("YYYY/MM/DD")}}.
 
       expect(result.html).toContain("Hallo Frontmatter BV");
       expect(result.html).toContain("Geldig tot 2026/02/21");
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("chapters apply first frontmatter globally and chapter frontmatter locally", async () => {
+    const tempDir = resolve(tmpdir(), `publishpipe-render-chapters-${Date.now()}`);
+    await mkdir(resolve(tempDir, "content"), { recursive: true });
+
+    await Bun.write(
+      resolve(tempDir, "content/01-first.md"),
+      `---
+title: Chapter Vars
+klantnaam: First BV
+vervaldatum: 21-02-2026
+---
+
+# One
+{{klantnaam}} {{vervaldatum | format("YYYYMMDD")}} {{contact}} {{tag}}
+`
+    );
+
+    await Bun.write(
+      resolve(tempDir, "content/02-second.md"),
+      `---
+klantnaam: Second BV
+---
+
+# Two
+{{klantnaam}} {{vervaldatum | format("YYYYMMDD")}} {{contact}} {{tag}}
+`
+    );
+
+    try {
+      const result = await render({
+        templateDir,
+        templateName: "default",
+        cwd: tempDir,
+        config: {
+          chapters: ["content/01-first.md", "content/02-second.md"],
+          variables: {
+            klantnaam: "Config BV",
+            vervaldatum: "01-01-2026",
+            contact: "hello@example.com",
+          },
+        },
+        variables: { tag: "RUNTIME" },
+      });
+
+      expect(result.html).toContain("First BV 20260221");
+      expect(result.html).toContain("Second BV 20260221");
+      expect(result.html).toContain("hello@example.com");
+      expect(result.html).toContain("RUNTIME");
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }

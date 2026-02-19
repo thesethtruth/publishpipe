@@ -1,6 +1,6 @@
 # publishpipe
 
-Markdown in, PDF out. No Electron, no LaTeX, no suffering.
+Markdown in, PDF out. No Electron, no LaTeX, no suffering. But pretty pages!
 
 Write your docs in markdown with YAML frontmatter. Preview with hot reload. Export to print-ready PDF with proper pagination, running headers, and page numbers. That's it.
 
@@ -146,9 +146,15 @@ Example: `content/notes-weekly-1.md` with output `report-{{fn}}.pdf` creates `re
 You can use variables in markdown content and in `output`/`--output` filename templates.
 
 Variable precedence:
-- `variables` from config (root + project merged)
-- `frontmatter` defaults from config
-- file frontmatter (highest, overrides config values)
+- root `variables` (global defaults)
+- project `variables` (override root)
+- markdown frontmatter
+- runtime variables (highest, e.g. `fn`)
+
+For `chapters` mode:
+- First chapter frontmatter is treated as document-level frontmatter and applies to all chapters.
+- Each chapter can still override those values for its own content via that chapter's frontmatter.
+- Effective order per chapter: root vars -> project vars -> first chapter frontmatter -> chapter frontmatter -> runtime vars.
 
 Example:
 

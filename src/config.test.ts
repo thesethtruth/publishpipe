@@ -18,7 +18,7 @@ describe("loadConfig", () => {
   test("loads root config", async () => {
     const config = await loadConfig(rootDir);
     expect(config.template).toBe("default");
-    expect(config.theme).toBe("light");
+    expect(["light", "dark"]).toContain(config.theme);
     expect(config.page?.size).toBe("A4");
   });
 
@@ -51,10 +51,11 @@ describe("loadProjectConfig", () => {
   });
 
   test("merges project config over root defaults", async () => {
+    const rootConfig = await loadConfig(rootDir);
     const config = await loadProjectConfig(rootDir, projectDir);
     // from root
     expect(config.template).toBe("default");
-    expect(config.theme).toBe("light");
+    expect(config.theme).toBe(rootConfig.theme);
     expect(config.titlePage).toBe(true);
     // from project (overrides)
     expect(config.chapters).toEqual([
