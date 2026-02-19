@@ -15,20 +15,20 @@
 <body>
   {% if titlePage %}
   <section class="title-page">
-    {% if title %}<h1 class="title-page-title">{{ title }}</h1>{% endif %}
-    {% if subtitle %}<p class="title-page-subtitle">{{ subtitle }}</p>{% endif %}
+    {% if title is defined %}<h1 class="title-page-title">{{ title }}</h1>{% endif %}
+    {% if subtitle is defined %}<p class="title-page-subtitle">{{ subtitle }}</p>{% endif %}
     <div class="title-page-meta">
-      {% if author %}<p class="title-page-author">{{ author }}</p>{% endif %}
-      {% if date %}<p class="title-page-date">{{ date }}</p>{% endif %}
+      {% if author is defined %}<p class="title-page-author">{{ author }}</p>{% endif %}
+      {% if date is defined %}<p class="title-page-date">{{ date }}</p>{% endif %}
     </div>
   </section>
   {% else %}
   <header class="document-header">
-    {% if title %}<h1>{{ title }}</h1>{% endif %}
-    {% if subtitle %}<p class="subtitle">{{ subtitle }}</p>{% endif %}
+    {% if title is defined %}<h1>{{ title }}</h1>{% endif %}
+    {% if subtitle is defined %}<p class="subtitle">{{ subtitle }}</p>{% endif %}
     <div class="meta">
-      {% if author %}<span class="author">{{ author }}</span>{% endif %}
-      {% if date %}<span class="date">{{ date }}</span>{% endif %}
+      {% if author is defined %}<span class="author">{{ author }}</span>{% endif %}
+      {% if date is defined %}<span class="date">{{ date }}</span>{% endif %}
     </div>
   </header>
   {% endif %}

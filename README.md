@@ -185,6 +185,11 @@ Date formatting filter:
 - `{{ someDate | format("YYYYMMDD") }}`
 - `{{ someDate | format("D MMMM YYYY") }}`
 - With `date_locale: "nl"`: `{{ someDate | format("D MMMM YYYY") }}` -> `12 februari 2026`
+
+Missing variable warnings:
+- If a templated variable is used but not provided, publishpipe logs a warning and continues.
+- This applies to markdown content templates, `template.njk`, and output filename templates.
+- Mark optional template variables with `| default(...)` or by guarding blocks with `is defined`.
 - With `date_locale: "en"`: `{{ someDate | format("D MMMM YYYY") }}` -> `12 February 2026`
 
 ## CLI

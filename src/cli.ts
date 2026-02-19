@@ -6,7 +6,13 @@ import { render } from "./render";
 import { startDevServer } from "./server";
 import { loadProjectConfig, type PublishPipeConfig } from "./config";
 import { filterSourceFilesByName } from "./source-filter";
-import { renderTemplateString } from "./variables";
+import { findMissingTemplateVariables, renderTemplateString } from "./variables";
+import { formatMissingVariableWarning } from "./warn";
+
+function warnMissingVariables(context: string, missing: string[]): void {
+  if (missing.length === 0) return;
+  console.warn(formatMissingVariableWarning(context, missing));
+}
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),
@@ -153,6 +159,8 @@ if (command === "dev") {
         config: { ...resolvedConfig, chapters: undefined },
       });
       const outputTemplate = values.output ?? resolvedConfig.output ?? "{{fn}}.pdf";
+      const missingOutputVars = findMissingTemplateVariables(outputTemplate, variables);
+      warnMissingVariables(`output template for "${fn}"`, missingOutputVars);
       const outputFilename = renderTemplateString(outputTemplate, variables, {
         dateLocale: resolvedConfig.date_locale ?? resolvedConfig.dateLocale,
       });
@@ -190,6 +198,8 @@ if (command === "dev") {
       values.output ??
       resolvedConfig.output ??
       (singleFn ? "{{fn}}.pdf" : "output.pdf");
+    const missingOutputVars = findMissingTemplateVariables(outputTemplate, variables);
+    warnMissingVariables("output template", missingOutputVars);
     const outputFilename = renderTemplateString(outputTemplate, variables, {
       dateLocale: resolvedConfig.date_locale ?? resolvedConfig.dateLocale,
     });

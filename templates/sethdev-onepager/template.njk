@@ -14,17 +14,17 @@
     </head>
     <body>
         <header class="document-header">
-            {% if title %}
+            {% if title is defined %}
                 <h1>{{ title }}</h1>
             {% endif %}
-            {% if subtitle %}
+            {% if subtitle is defined %}
                 <p class="subtitle">{{ subtitle }}</p>
             {% endif %}
             <div class="meta">
-                {% if author %}
+                {% if author is defined %}
                     <span class="author">{{ author }}</span>
                 {% endif %}
-                {% if date %}
+                {% if date is defined %}
                     <span class="date">{{ date }}</span>
                 {% endif %}
             </div>

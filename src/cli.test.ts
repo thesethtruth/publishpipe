@@ -1,7 +1,7 @@
 import { test, expect, describe, beforeAll, afterAll } from "bun:test";
 import { resolve, basename } from "path";
 import { mkdir, rm } from "fs/promises";
-import { renderTemplateString } from "./variables";
+import { findMissingTemplateVariables, renderTemplateString } from "./variables";
 
 const rootDir = resolve(import.meta.dir, "..");
 const testProjectDir = resolve(rootDir, "projects/_test-multi-source");
@@ -189,6 +189,14 @@ export default defineConfig({
       const result = basename(path, ".md");
       expect(result).toBe(expected);
     }
+  });
+
+  test("detects missing variables in filename template", () => {
+    const missing = findMissingTemplateVariables(
+      "offer-{{klantnaam}}-{{vervaldatum | format(\"YYYYMMDD\")}}-{{fn}}.pdf",
+      { fn: "doc-1", klantnaam: "ACME" }
+    );
+    expect(missing).toEqual(["vervaldatum"]);
   });
 });
 

@@ -313,4 +313,76 @@ vervaldatum: 12-02-2026
       await rm(tempDir, { recursive: true, force: true });
     }
   });
+
+  test("warns when markdown template variables are missing", async () => {
+    const tempDir = resolve(tmpdir(), `publishpipe-render-missing-vars-${Date.now()}`);
+    await mkdir(tempDir, { recursive: true });
+    const markdownPath = resolve(tempDir, "missing-vars.md");
+
+    await Bun.write(
+      markdownPath,
+      `---
+title: Missing Vars
+---
+
+Hello {{klantnaam}}.
+`
+    );
+
+    const messages: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
+      messages.push(args.map((v) => String(v)).join(" "));
+    };
+
+    try {
+      await render({
+        markdownPath,
+        templateDir,
+        templateName: "default",
+        config: {},
+      });
+      expect(messages.join("\n")).toContain("Missing template variables");
+      expect(messages.join("\n")).toContain("klantnaam");
+    } finally {
+      console.warn = originalWarn;
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("warns when template.njk variables are missing", async () => {
+    const tempDir = resolve(tmpdir(), `publishpipe-render-missing-template-vars-${Date.now()}`);
+    const templateRoot = resolve(tempDir, "templates");
+    const templateName = "custom";
+    await mkdir(resolve(templateRoot, templateName), { recursive: true });
+    const markdownPath = resolve(tempDir, "doc.md");
+
+    await Bun.write(
+      resolve(templateRoot, templateName, "template.njk"),
+      `<!doctype html><html><body>{{content}} {{required_a}} {{required_b}}</body></html>`
+    );
+    await Bun.write(resolve(markdownPath), "# Hello");
+
+    const messages: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
+      messages.push(args.map((v) => String(v)).join(" "));
+    };
+
+    try {
+      await render({
+        markdownPath,
+        templateDir: templateRoot,
+        templateName,
+        config: {},
+      });
+      const output = messages.join("\n");
+      expect(output).toContain(`template "${templateName}/template.njk"`);
+      expect(output).toContain("required_a");
+      expect(output).toContain("required_b");
+    } finally {
+      console.warn = originalWarn;
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
 });

@@ -3,7 +3,13 @@ import { marked } from "marked";
 import nunjucks from "nunjucks";
 import { resolve } from "path";
 import type { PublishPipeConfig } from "./config";
-import { createTemplateEnvironment, resolveTemplateVariables } from "./variables";
+import {
+  createTemplateEnvironment,
+  findMissingTemplateVariables,
+  findMissingTemplateVariablesInActiveTree,
+  resolveTemplateVariables,
+} from "./variables";
+import { formatMissingVariableWarning } from "./warn";
 
 export interface RenderOptions {
   /** Single markdown file path (used when no chapters) */
@@ -22,6 +28,11 @@ export interface RenderResult {
   html: string;
   frontmatter: Record<string, unknown>;
   variables: Record<string, unknown>;
+}
+
+function warnMissingVariables(context: string, missing: string[]): void {
+  if (missing.length === 0) return;
+  console.warn(formatMissingVariableWarning(context, missing));
 }
 
 /** Load CSS with support for @extends directive */
@@ -57,13 +68,13 @@ async function readMarkdown(
 async function readChapters(
   chapterPaths: string[],
   cwd: string
-): Promise<Array<{ frontmatter: Record<string, unknown>; body: string }>> {
-  const chapters: Array<{ frontmatter: Record<string, unknown>; body: string }> = [];
+): Promise<Array<{ path: string; frontmatter: Record<string, unknown>; body: string }>> {
+  const chapters: Array<{ path: string; frontmatter: Record<string, unknown>; body: string }> = [];
 
   for (let i = 0; i < chapterPaths.length; i++) {
     const absPath = resolve(cwd, chapterPaths[i]);
     const { frontmatter: fm, body } = await readMarkdown(absPath);
-    chapters.push({ frontmatter: fm, body });
+    chapters.push({ path: chapterPaths[i], frontmatter: fm, body });
   }
 
   return chapters;
@@ -86,10 +97,12 @@ export async function render(opts: RenderOptions): Promise<RenderResult> {
     // config variables (root+project merged) -> first chapter frontmatter -> chapter frontmatter -> runtime vars
     const baseVars = resolveTemplateVariables(config.variables, frontmatter);
     const chapterBodies = chapters.map((chapter) =>
-      markdownEnv.renderString(
-        chapter.body,
-        resolveTemplateVariables(baseVars, chapter.frontmatter, opts.variables)
-      )
+      {
+        const chapterVars = resolveTemplateVariables(baseVars, chapter.frontmatter, opts.variables);
+        const missing = findMissingTemplateVariables(chapter.body, chapterVars);
+        warnMissingVariables(`chapter "${chapter.path}"`, missing);
+        return markdownEnv.renderString(chapter.body, chapterVars);
+      }
     );
     renderedMdBody = chapterBodies.join("\n\n---\n\n");
     templateVars = resolveTemplateVariables(baseVars, opts.variables);
@@ -98,6 +111,8 @@ export async function render(opts: RenderOptions): Promise<RenderResult> {
     const result = await readMarkdown(opts.markdownPath);
     frontmatter = result.frontmatter;
     templateVars = resolveTemplateVariables(config.variables, frontmatter, opts.variables);
+    const missing = findMissingTemplateVariables(result.body, templateVars);
+    warnMissingVariables(`"${opts.markdownPath}"`, missing);
     renderedMdBody = markdownEnv.renderString(result.body, templateVars);
   } else {
     throw new Error("No content source: provide markdownPath or config.chapters");
@@ -115,7 +130,7 @@ export async function render(opts: RenderOptions): Promise<RenderResult> {
   // Read template's style.css (with @extends support)
   const templateCss = await loadTemplateCss(opts.templateDir, opts.templateName);
 
-  const html = env.render("template.njk", {
+  const renderData = {
     content: contentHtml,
     css: templateCss,
     titlePage: config.titlePage ?? false,
@@ -124,7 +139,23 @@ export async function render(opts: RenderOptions): Promise<RenderResult> {
     pageSize: config.page?.size ?? "A4",
     pageMargin: config.page?.margin ?? "2.5cm 2cm 2cm 2cm",
     ...templateVars,
-  });
+  };
+
+  const templateFilePath = resolve(templatePath, "template.njk");
+  const templateSource = await Bun.file(templateFilePath).text();
+  const missingTemplateVars = await findMissingTemplateVariablesInActiveTree(
+    templateSource,
+    renderData,
+    async (name: string) => {
+      const includePath = resolve(templatePath, name);
+      const includeFile = Bun.file(includePath);
+      if (!(await includeFile.exists())) return null;
+      return await includeFile.text();
+    }
+  );
+  warnMissingVariables(`template "${opts.templateName}/template.njk"`, missingTemplateVars);
+
+  const html = env.render("template.njk", renderData);
 
   return { html, frontmatter, variables: templateVars };
 }
