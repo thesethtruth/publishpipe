@@ -5,12 +5,14 @@ import { Glob } from "bun";
 import { render } from "./render";
 import { startDevServer } from "./server";
 import { loadProjectConfig, type PublishPipeConfig } from "./config";
+import { filterSourceFilesByName } from "./source-filter";
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),
   options: {
     template: { type: "string" },
     output: { type: "string", short: "o" },
+    name: { type: "string" },
     port: { type: "string", default: "3000" },
     "title-page": { type: "boolean" },
     proposal: { type: "boolean" },
@@ -72,7 +74,7 @@ if (!markdownPath && config.content) {
 if (!command) {
   console.log(`Usage:
   publishpipe dev [project-name|file.md] [--template name] [--port 3000] [--title-page] [--proposal] [--theme light|dark]
-  publishpipe build [project-name|file.md] [--template name] [--output out.pdf] [--title-page] [--proposal] [--theme light|dark]`);
+  publishpipe build [project-name|file.md] [--template name] [--output out.pdf] [--name filename] [--title-page] [--proposal] [--theme light|dark]`);
   process.exit(1);
 }
 
@@ -101,12 +103,23 @@ if (command === "dev") {
 
   // Multi-file mode: source glob patterns
   if (resolvedConfig.source?.length) {
-    const sourceFiles: string[] = [];
+    let sourceFiles: string[] = [];
 
     for (const pattern of resolvedConfig.source) {
       const glob = new Glob(pattern);
       for await (const file of glob.scan({ cwd: resolveBase, absolute: true })) {
         sourceFiles.push(file);
+      }
+    }
+
+    if (values.name) {
+      sourceFiles = filterSourceFilesByName(sourceFiles, values.name);
+      if (sourceFiles.length === 0) {
+        console.error(
+          `No source file matched --name "${values.name}" in patterns:`,
+          resolvedConfig.source
+        );
+        process.exit(1);
       }
     }
 

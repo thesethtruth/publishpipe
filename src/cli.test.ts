@@ -93,6 +93,50 @@ export default defineConfig({
     expect(await notesPdf.exists()).toBe(false);
   }, 30000);
 
+  test("builds only one PDF when using --name", async () => {
+    await rm(resolve(testProjectDir, "output-doc-alpha.pdf"), { force: true });
+    await rm(resolve(testProjectDir, "output-doc-beta.pdf"), { force: true });
+
+    const proc = Bun.spawn(
+      ["bun", "run", "src/cli.ts", "build", "_test-multi-source", "--name", "doc-alpha"],
+      {
+        cwd: rootDir,
+        stdout: "pipe",
+        stderr: "pipe",
+      }
+    );
+
+    const exitCode = await proc.exited;
+    const stdout = await new Response(proc.stdout).text();
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("Found 1 source file(s)");
+    expect(stdout).toContain("output-doc-alpha.pdf");
+    expect(stdout).not.toContain("output-doc-beta.pdf");
+
+    const alphaPdf = Bun.file(resolve(testProjectDir, "output-doc-alpha.pdf"));
+    const betaPdf = Bun.file(resolve(testProjectDir, "output-doc-beta.pdf"));
+    expect(await alphaPdf.exists()).toBe(true);
+    expect(await betaPdf.exists()).toBe(false);
+  }, 30000);
+
+  test("fails when --name does not match any source file", async () => {
+    const proc = Bun.spawn(
+      ["bun", "run", "src/cli.ts", "build", "_test-multi-source", "--name", "missing-file"],
+      {
+        cwd: rootDir,
+        stdout: "pipe",
+        stderr: "pipe",
+      }
+    );
+
+    const exitCode = await proc.exited;
+    const stderr = await new Response(proc.stderr).text();
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toContain('No source file matched --name "missing-file"');
+  }, 30000);
+
   test("{{fn}} replacement in output filename", () => {
     // Unit test for the template replacement logic
     const testCases = [

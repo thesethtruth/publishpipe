@@ -134,6 +134,7 @@ export default defineConfig({
 - `source` takes an array of glob patterns
 - Each matched file becomes a separate PDF
 - Use `{{fn}}` in `output` for the source filename (without extension)
+- Use `--name <filename>` to build only one matched file (`.md` optional)
 
 Example: `content/notes-weekly-1.md` with output `report-{{fn}}.pdf` creates `report-notes-weekly-1.pdf`.
 
@@ -150,6 +151,7 @@ publishpipe build [target] [options]   # generate PDF
 |------|-------------|
 | `--template <name>` | Template folder (default: `default`) |
 | `--output, -o <path>` | Output PDF path |
+| `--name <filename>` | In `source` mode, build one file by basename |
 | `--port <number>` | Dev server port (default: `3000`) |
 | `--title-page` | Enable title page |
 | `--theme <light\|dark>` | Theme |

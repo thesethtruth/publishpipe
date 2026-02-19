@@ -3,6 +3,8 @@
 !/projects/example-project/**
 
 
+# python
+__pycache__/
 
 # dependencies (bun install)
 node_modules

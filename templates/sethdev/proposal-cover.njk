@@ -5,8 +5,8 @@
         {% if title %}
             <h1 class="p-page-title">{{ title }}</h1>
         {% endif %}
-        {% if subtitle %}
-            <p class="title-page-subtitle">{{ subtitle }}</p>
+        {% if klant %}
+            <p class="title-page-subtitle">{{ klant }}</p>
         {% endif %}
     </div>
     <div class="proposal-cover-footer">
@@ -67,7 +67,9 @@
                     <p>{{ klanttelefoon }}</p>
                 {% endif %}
                 {% if klantemail %}
-                    <p>{{ klantemail }}</p>
+                    <p>
+                        <a href="mailto:{{ klantemail }}">{{ klantemail }}</a>
+                    </p>
                 {% endif %}
             </div>
         {% endif %}
