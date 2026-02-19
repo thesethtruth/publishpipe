@@ -101,6 +101,11 @@ These populate the title page and running headers.
 
 All fields are optional. Root config sets defaults, project config overrides, CLI flags override everything.
 
+Config precedence for all config fields:
+- root `publishpipe.config.ts`
+- project `projects/<name>/publishpipe.config.ts`
+- CLI flags (`--template`, `--theme`, `--output`, etc.)
+
 ```ts
 // publishpipe.config.ts
 import { defineConfig } from "./src/config";
