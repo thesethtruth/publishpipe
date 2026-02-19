@@ -71,10 +71,11 @@ async function readChapters(
 
 export async function render(opts: RenderOptions): Promise<RenderResult> {
   const config = opts.config ?? {};
+  const dateLocale = config.date_locale ?? config.dateLocale;
   let frontmatter: Record<string, unknown>;
   let templateVars: Record<string, unknown>;
   let renderedMdBody: string;
-  const markdownEnv = createTemplateEnvironment();
+  const markdownEnv = createTemplateEnvironment(undefined, { dateLocale });
 
   if (config.chapters?.length) {
     // Multi-chapter mode
@@ -107,7 +108,9 @@ export async function render(opts: RenderOptions): Promise<RenderResult> {
 
   // Load and render Nunjucks template
   const templatePath = resolve(opts.templateDir, opts.templateName);
-  const env = createTemplateEnvironment(new nunjucks.FileSystemLoader(templatePath));
+  const env = createTemplateEnvironment(new nunjucks.FileSystemLoader(templatePath), {
+    dateLocale,
+  });
 
   // Read template's style.css (with @extends support)
   const templateCss = await loadTemplateCss(opts.templateDir, opts.templateName);

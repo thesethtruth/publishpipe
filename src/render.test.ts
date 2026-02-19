@@ -281,4 +281,36 @@ klantnaam: Second BV
       await rm(tempDir, { recursive: true, force: true });
     }
   });
+
+  test("formats dates with Dutch locale when date_locale is nl", async () => {
+    const tempDir = resolve(tmpdir(), `publishpipe-render-locale-${Date.now()}`);
+    await mkdir(tempDir, { recursive: true });
+    const markdownPath = resolve(tempDir, "locale.md");
+
+    await Bun.write(
+      markdownPath,
+      `---
+title: Locale Test
+vervaldatum: 12-02-2026
+---
+
+{{vervaldatum | format("D MMMM YYYY")}}
+`
+    );
+
+    try {
+      const result = await render({
+        markdownPath,
+        templateDir,
+        templateName: "default",
+        config: {
+          date_locale: "nl",
+        },
+      });
+
+      expect(result.html).toContain("12 februari 2026");
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
 });

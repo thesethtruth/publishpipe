@@ -153,7 +153,9 @@ if (command === "dev") {
         config: { ...resolvedConfig, chapters: undefined },
       });
       const outputTemplate = values.output ?? resolvedConfig.output ?? "{{fn}}.pdf";
-      const outputFilename = renderTemplateString(outputTemplate, variables);
+      const outputFilename = renderTemplateString(outputTemplate, variables, {
+        dateLocale: resolvedConfig.date_locale ?? resolvedConfig.dateLocale,
+      });
       const outputPath = values.output
         ? resolve(outputFilename)
         : resolve(resolveBase, outputFilename);
@@ -188,7 +190,9 @@ if (command === "dev") {
       values.output ??
       resolvedConfig.output ??
       (singleFn ? "{{fn}}.pdf" : "output.pdf");
-    const outputFilename = renderTemplateString(outputTemplate, variables);
+    const outputFilename = renderTemplateString(outputTemplate, variables, {
+      dateLocale: resolvedConfig.date_locale ?? resolvedConfig.dateLocale,
+    });
 
     const outputPath = values.output
       ? resolve(outputFilename)

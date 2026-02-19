@@ -114,6 +114,7 @@ export default defineConfig({
   template: "default",       // template folder in templates/
   titlePage: true,           // dedicated title page from frontmatter
   theme: "light",            // "light" | "dark"
+  date_locale: "nl",         // date locale for | format(...) => "en" | "nl"
   page: {
     size: "A4",              // paper size
     margin: "2.5cm 2cm",     // CSS margin
@@ -183,6 +184,8 @@ Date formatting filter:
 - `{{ someDate | format }}` -> default `DD-MM-YYYY`
 - `{{ someDate | format("YYYYMMDD") }}`
 - `{{ someDate | format("D MMMM YYYY") }}`
+- With `date_locale: "nl"`: `{{ someDate | format("D MMMM YYYY") }}` -> `12 februari 2026`
+- With `date_locale: "en"`: `{{ someDate | format("D MMMM YYYY") }}` -> `12 February 2026`
 
 ## CLI
 

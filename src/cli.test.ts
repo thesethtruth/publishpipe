@@ -169,6 +169,15 @@ export default defineConfig({
     }
   });
 
+  test("variable replacement supports Dutch date locale", () => {
+    const result = renderTemplateString(
+      "{{vervaldatum | format(\"D MMMM YYYY\")}}",
+      { vervaldatum: "12-02-2026" },
+      { dateLocale: "nl" }
+    );
+    expect(result).toBe("12 februari 2026");
+  });
+
   test("extracts filename without extension", () => {
     const testCases = [
       { path: "/path/to/doc-alpha.md", expected: "doc-alpha" },

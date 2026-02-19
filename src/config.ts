@@ -22,6 +22,10 @@ export interface PublishPipeConfig {
   source?: string[];
   /** Show a Dutch proposal cover page (sethdev template) */
   proposal?: boolean;
+  /** Locale used by date formatting filter, e.g. "en" or "nl" */
+  date_locale?: string;
+  /** @deprecated Use `date_locale` */
+  dateLocale?: string;
   /** Global template variables (overridden by markdown frontmatter) */
   variables?: Record<string, unknown>;
   /** Output PDF filename template. Use variables like {{fn}} and {{date | format("YYYYMMDD")}}. */
