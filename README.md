@@ -219,6 +219,15 @@ Templates live in `templates/<name>/` and contain:
 
 Available variables in the template: `content`, `css`, `title`, `subtitle`, `author`, `date`, `titlePage`, `theme`, `pageSize`, `pageMargin`, plus any extra frontmatter fields.
 
+### BPRS template behavior
+
+The `bprs` template uses:
+
+- A dedicated full-page cover (title page), followed by a forced page break
+- Cover metadata with `author` and `date` on separate lines
+- No footer on the cover page
+- Centered footer on content pages: document title + page numbers
+
 ### CSS inheritance
 
 A template can extend another template's CSS by adding `/* @extends <parent> */` at the top of its `style.css`:

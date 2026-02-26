@@ -20,10 +20,12 @@
                     <td class="proposal-cover-field">Nummer</td>
                     <td>{{ offertenummer }}</td>
                 </tr>
-                <tr>
-                    <td class="proposal-cover-field">Code</td>
-                    <td>{{ offertecode }}</td>
-                </tr>
+                {% if offertecode is defined %}
+                    <tr>
+                        <td class="proposal-cover-field">Code</td>
+                        <td>{{ offertecode }}</td>
+                    </tr>
+                {% endif %}
                 {% if kenmerk is defined %}
                     <tr>
                         <td class="proposal-cover-field">Kenmerk</td>
@@ -58,6 +60,13 @@
                     <p>
                         <a href="mailto:{{ klantemail }}">{{ klantemail }}</a>
                     </p>
+                {% endif %}
+                {% if klantkvk is defined %}
+                    <div class="proposal-cover-legal">
+                        <p>
+                            <span class="proposal-cover-field">KVK</span>
+                            {{ klantkvk }}</p>
+                    </div>
                 {% endif %}
             </div>
         {% endif %}
